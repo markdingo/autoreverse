@@ -30,6 +30,7 @@ the [FAQ](FAQ.md). The technically inclined may wish to download the
 [![Build Status](https://travis-ci.org/markdingo/autoreverse.svg?branch=master)](https://travis-ci.org/markdingo/autoreverse)
 [![Go Report Card](https://goreportcard.com/badge/github.com/markdingo/autoreverse)](https://goreportcard.com/report/github.com/markdingo/autoreverse)
 [![codecov](https://codecov.io/gh/markdingo/autoreverse/branch/master/graph/badge.svg)](https://codecov.io/gh/markdingo/autoreverse)
+[![Go Reference](https://pkg.go.dev/badge/github.com/markdingo/autoreverse.svg)](https://pkg.go.dev/github.com/markdingo/autoreverse)
 
 ### Key Features of autoreverse
 
