@@ -21,8 +21,9 @@ synthesize its own "Zones of Authority". This approach to gleaning information f
 DNS represents an over-arching philosophy of `autoreverse` in that it never requires
 configuration material which duplicates that already present in the DNS.
 
-For more details on how to run `autoreverse` consider the [Quick Start
-Guide](QUICKSTART.md), the [manpage](pregen/MANPAGE.txt) or the [FAQ](FAQ.md).
+For more details about `autoreverse` consider the [Quick Start Guide](QUICKSTART.md) or
+the [FAQ](FAQ.md). The technically inclined may wish to download the
+[manpage](autoreverse.8) and run it thru `mandoc -a`.
 
 ### Project Status
 

@@ -65,7 +65,7 @@ test tests: $(PREGEN)
 	go vet ./...
 
 .PHONY: pregen
-pregen: pregen/version.go pregen/autoreverse.8 pregen/MANPAGE.txt
+pregen: pregen/version.go pregen/autoreverse.8
 
 # Pre-generated files needed by build
 pregen/version.go: generate_version.sh ChangeLog.md Makefile
@@ -79,11 +79,6 @@ pregen/version.go: generate_version.sh ChangeLog.md Makefile
 pregen/autoreverse.8: autoreverse.8
 	mkdir -p pregen
 	cp -f $? $@
-
-# github home page links to this manpage
-pregen/MANPAGE.txt: autoreverse.8
-	mkdir -p pregen
-	mandoc -T ascii $? >$@
 
 # Cross-compile targets
 
