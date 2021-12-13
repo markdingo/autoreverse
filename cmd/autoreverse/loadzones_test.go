@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"strings"
@@ -284,13 +285,26 @@ func TestLoadFromHTTP(t *testing.T) {
 		{"bad.example.zone", false, false, false, 0, "", 0}, // Zone format is bad
 		{"noexist.zone", false, false, false, 0, "", 0},     // Zone does not exist
 	}
+
+	// Create the listener inline so we know the socket is accepting
+	// connections. Otherwise the tests may win the CPU before the server does.
+
+	addr := "127.0.0.1:6380"
+	ln, err := net.Listen("tcp", addr)
+	if err != nil {
+		t.Fatal("Setup", err)
+	}
+	defer ln.Close()
+
 	go func() {
-		err := http.ListenAndServe("127.0.0.1:6380",
+		err := http.Serve(ln,
 			http.FileServer(http.Dir("./testdata/loadzones")))
-		panic(err)
+		if !strings.Contains(err.Error(), "use of closed network") {
+			panic(err)
+		}
 	}()
 
-	pList := []string{"http://127.0.0.1:6380/"}
+	pList := []string{"http://" + addr + "/"}
 
 	// Testing HTTPS with a loopback server is a bit of a pain so in my local test
 	// environment I've "arranged" for a friendly public server to host the test files
