@@ -1,0 +1,4 @@
+;;
+;; A valid delegation
+;;
+N:4.0.192.in-addr.arpa.	300	IN	NS	ns.arpa.example.net.

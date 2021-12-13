@@ -1,0 +1,4 @@
+;;
+;; A good delegation
+;;
+N:wrongprobe.example.net.	300	IN	NS	ns.wrongprobe.example.net.

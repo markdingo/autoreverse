@@ -1,0 +1,2 @@
+;; This is an error file to trigger and error return from the mock resolver
+RCODE:SERVFAIL

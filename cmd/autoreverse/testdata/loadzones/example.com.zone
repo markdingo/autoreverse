@@ -1,0 +1,2 @@
+$ORIGIN example.com.
+@	IN SOA internal.example.com. hostmaster.example.com. 1639200485 3 3 1209600 480

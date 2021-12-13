@@ -1,0 +1,4 @@
+;;
+;; A good reverse delegation
+;;
+N:0.0.0.0.0.0.0.0.8.b.d.0.1.0.0.2.ip6.arpa.	300	IN	NS	ns.ip6.example.net.

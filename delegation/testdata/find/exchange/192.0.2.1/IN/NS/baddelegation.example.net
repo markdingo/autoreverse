@@ -1,0 +1,4 @@
+;;
+;; A bad delegation as it has no NS entry
+;;
+E:ns.baddelegation.example.net. 300	IN	A	192.0.2.11

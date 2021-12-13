@@ -1,0 +1,18 @@
+;;
+;; Answer Section
+;;
+A:a.ns.example.net. 300 IN MX 5 alt2.aspmx.l.google.com.
+A:a.ns.example.net. 300 IN MX 1 aspmx.l.google.com.
+A:a.ns.example.net. 300 IN MX 10 alt3.aspmx.l.google.com.
+A:a.ns.example.net. 300 IN MX 10 alt4.aspmx.l.google.com.
+A:a.ns.example.net. 300 IN MX 15 urkaz4ggycbffdtljwk7cpwwhv7bhlyh6o5mpx4r6vcnjfxt2sba.mx-verification.google.com.
+A:a.ns.example.net. 300 IN MX 5 alt1.aspmx.l.google.com.
+;;
+;; Authority Section
+;;
+N:a.ns.example.net. 86400 IN NS ns-1580.awsdns-05.co.uk.
+N:a.ns.example.net. 86400 IN NS ns-321.awsdns-40.com.
+N:a.ns.example.net. 86400 IN NS ns-764.awsdns-31.net.
+N:a.ns.example.net. 86400 IN NS ns-1050.awsdns-03.org.
+;;
+E:a.ns.example.net. 60 IN TXT "This is just a filler for testing purposes"

@@ -1,0 +1,7 @@
+$ORIGIN 8.b.d.0.1.0.0.2.ip6.arpa.
+$TTL 120
+
+@ IN SOA internal.example.net. hostmaster.example.net. 1636863624 3 3 1209600 480
+
+1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0 IN PTR images.example.com.
+2.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0 IN PTR pluton.example.com.

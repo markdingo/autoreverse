@@ -1,0 +1,6 @@
+;;
+;; This is the wrong delegation because the returned details don't match the qName. Note the qName
+;; on the NS
+;;
+N:wrongrelative.example.net.	300	IN	NS	ns.wrongdelegation.example.net.
+E:ns.wrongdelegation.example.net. 300	IN	A	192.0.2.12

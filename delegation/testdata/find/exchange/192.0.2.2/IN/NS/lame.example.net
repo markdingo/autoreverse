@@ -1,0 +1,4 @@
+;;
+;; A lame delegation
+;;
+N:lame.example.net.	300	IN	NS	ns.lame.example.net.

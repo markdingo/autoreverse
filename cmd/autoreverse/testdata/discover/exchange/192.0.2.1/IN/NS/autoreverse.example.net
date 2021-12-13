@@ -1,0 +1,5 @@
+;;
+;; A valid delegation
+;;
+N:autoreverse.example.net.	300	IN	NS	ns.autoreverse.example.net.
+E:ns.autoreverse.example.net. 300	IN	A	192.0.2.11

@@ -1,0 +1,10 @@
+$ORIGIN example.net.
+$TTL 60
+subzone IN SOAx internal.example.net. hostmaster.example.net. 1636570941 16384 2048 1209600 480
+
+pluton	IN	A	192.0.2.123
+	IN	AAAA	2001:db8::123
+
+images	IN	A	192.0.2.124
+	IN	AAAA	2001:db8::124
+	IN	AAAA	2001:db8::125

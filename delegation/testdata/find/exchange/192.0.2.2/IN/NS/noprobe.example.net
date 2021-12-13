@@ -1,0 +1,4 @@
+;;
+;; A good reverse delegation
+;;
+N:noprobe.example.net.	300	IN	NS	ns.noprobe.example.net.

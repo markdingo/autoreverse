@@ -1,0 +1,3 @@
+N:autoreverse.a.b.c.example.net. 300	IN	NS	ns.autoreverse.a.b.c.example.net.
+E:ns.autoreverse.a.b.c.example.net. 300 IN	AAAA	2001:db8::94da:d800:781
+E:ns.autoreverse.a.b.c.example.net. 300 IN	A	192.0.2.191
