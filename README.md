@@ -165,7 +165,7 @@ successes *and* failures.
 To fetch, compile and install `autoreverse`, run the following commands:
 
 ```sh
-git clone github.com/markdingo/autoreverse.git
+git clone git://github.com/markdingo/autoreverse.git
 
 cd autoreverse
 
