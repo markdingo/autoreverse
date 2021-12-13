@@ -35,7 +35,7 @@ the [FAQ](FAQ.md). The technically inclined may wish to download the
 [![Go Report Card](https://goreportcard.com/badge/github.com/markdingo/autoreverse)](https://goreportcard.com/report/github.com/markdingo/autoreverse)
 [![Go Reference](https://pkg.go.dev/badge/github.com/markdingo/autoreverse.svg)](https://pkg.go.dev/github.com/markdingo/autoreverse)
 
-### Key Features of autoreverse
+### Key Features
 
 While `autoreverse` is a specialized reverse server, it does provide a number of
 capabilities within that scope. Specifically it:
@@ -56,7 +56,7 @@ already in use.
 query in the "reverse DNS tree". These terms are used interchangeable in this document. If
 you wish to know more, [Wikipedia](https://en.wikipedia.org/wiki/Reverse_DNS_lookup) has
 details and [rfc8499](https://www.rfc-editor.org/rfc/rfc8499.html) is a great resource for
-understanding and using correct DNS terminology.
+understanding and using correct DNS terminology.)
 
 ### Who should use autoreverse?
 
@@ -68,7 +68,7 @@ all, you might be a sysadmin who wants all reverse queries directed to a zero-ma
 system, in which case `autoreverse` can probably take care of that for you.
 
 
-### What do you mean by "minimal configuration"?
+### What is meant by "minimal configuration"?
 
 `autoreverse` avoids redundant configuration and attempts to deduce just about everything
 possible that's already present in the DNS. That means `autoreverse` can start up and
