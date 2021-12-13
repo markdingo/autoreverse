@@ -7,7 +7,7 @@ ARCMD=$(ARPATH)/autoreverse
 ALL=$(ARCMD)
 CLEANPATHS=$(ARPATH)
 ALLPKGS=database/*.go delegation/*.go *util/*.go log/*.go pregen/*.go resolver/*.go
-PREGEN=pregen/version.go pregen/autoreverse.8 pregen/MANPAGE.txt
+PREGEN=pregen/version.go pregen/autoreverse.8
 
 # If your version of make complains about this include directive, you can safely remove it
 # without any ill-effects. It's solely to include targets only relevant to the original
