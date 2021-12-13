@@ -169,7 +169,7 @@ successes *and* failures.
 To fetch, compile and install `autoreverse`, run the following commands:
 
 ```sh
-git clone git://github.com/markdingo/autoreverse.git
+git clone https://github.com/markdingo/autoreverse.git
 
 cd autoreverse
 
