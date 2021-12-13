@@ -165,17 +165,15 @@ be possible to target other platforms too! This project is very interested to he
 attempts to install `autoreverse` on gateway routers so please provide feedback of
 successes *and* failures.
 
-### Fetch and Make
+### Compilation From Sources
 
 To fetch, compile and install `autoreverse`, run the following commands:
 
 ```sh
-git clone https://github.com/markdingo/autoreverse.git
-
-cd autoreverse
-
-make clean all
-sudo make install          # Installs into /usr/local/sbin
+$ git clone https://github.com/markdingo/autoreverse.git
+$ cd autoreverse
+$ make clean all
+$ sudo make install          # Installs into /usr/local/sbin
 ```
 
 If `git` is unavailable to you, github offers a zip download function on the project page.
