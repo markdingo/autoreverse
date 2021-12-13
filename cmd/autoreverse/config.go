@@ -118,5 +118,5 @@ func (t *config) printVersion() {
 		programName, pregen.Version, pregen.ReleaseDate)
 	fmt.Fprintf(log.Out(), "Project:     %s\n", t.projectURL)
 	fmt.Fprintf(log.Out(), "Inspiration: %s\n",
-	"https://datatracker.ietf.org/doc/html/rfc8501#section-2.5")
+		"https://datatracker.ietf.org/doc/html/rfc8501#section-2.5")
 }
