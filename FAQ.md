@@ -2,18 +2,18 @@
 
 ### Table of Contents
 
-1. [Why bother answering reverse DNS queries?](#Why bother answering reverse DNS queries?)
-1. [What is the design philosophy behind autoreverse?](#What is the design philosophy behind autoreverse?)
-1. [What is DNS walking?](#What is DNS walking?)
-1. [What is DNS Probing?](#What is DNS Probing?)
-1. [My ISP insists that autoreverse runs first but autoreverse insists the ISP sets the delegation first - what do I do?](#My ISP insists that autoreverse runs first but autoreverse insists the ISP sets the delegation first - what do I do?)
-1. [Can autoreverse work behind a NAT?](#Can autoreverse work behind a NAT?)
-1. [What is the recommended forward delegation snippet?](#What is the recommended forward delegation snippet?)
-1. [What is the recommended reverse delegation snippet?](#What is the recommended reverse delegation snippet?)
-1. [Can autoreverse serve ULAs - aka rfc1918 and rfc4193 addresses?](#Can autoreverse serve ULAs - aka rfc1918 and rfc4193 addresses?)
-1. [Can autoreverse serve reverse ipv4 zones?](#Can autoreverse serve reverse ipv4 zones?)
-1. [How does autoreverse go from knowing nothing to knowing everything?](#How does autoreverse go from knowing nothing to knowing everything?)
-1. [How does the -passthru option work?](#How does the -passthru option work?)
+1. [Why bother answering reverse DNS queries?](#why-bother-answering-reverse-dns-queries)
+1. [What is the design philosophy behind autoreverse?](#what-is-the-design-philosophy-behind-autoreverse)
+1. [What is DNS walking?](#what-is-dns-walking)
+1. [What is DNS Probing?](#what-is-dns-Probing)
+1. [My ISP insists that autoreverse runs first but autoreverse insists the ISP sets the delegation first - what do I do?](#my-isp-insists-that-autoreverse-runs-first-but-autoreverse-insists-the-isp-sets-the-delegation-first---what-do-i-do)
+1. [Can autoreverse work behind a NAT?](#can-autoreverse-work-behind-a-nat)
+1. [What is the recommended forward delegation snippet?](#what-is-the-recommended-forward-delegation-snippet)
+1. [What is the recommended reverse delegation snippet?](#what-is-the-recommended-reverse-delegation-snippet)
+1. [Can autoreverse serve ULAs - aka rfc1918 and rfc4193 addresses?](#can-autoreverse-serve-ulas---aka-rfc1918-and-rfc4193-addresses)
+1. [Can autoreverse serve reverse ipv4 zones?](#can-autoreverse-serve-reverse-ipv4-zones)
+1. [How does autoreverse go from knowing nothing to knowing everything?](#how-does-autoreverse-go-from-knowing-nothing-to-knowing-everything)
+1. [How does passthru work?](#how-does-passthru-work)
 
 ### Why bother answering reverse DNS queries?
 
@@ -269,7 +269,7 @@ self-identification steps:
 
 1. Start responding to DNS queries.
 
-### How does the -passthru option work?
+### How does passthru work?
 
 The `--passthru` option is experimental and time will tell whether it is useful or
 not... The hope is that feature is useful to small sites which are only assigned a single
