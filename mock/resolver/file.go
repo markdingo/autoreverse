@@ -70,7 +70,10 @@ func init() {
 
 var tracer *os.File
 
+// It turns out that github and zip don't like filenames with colons, so we substitute
+// with "_". This is all just test data so it has no impact on running code.
 func (t *mockResolver) loadFile(fname string) (r dns.Msg) {
+	fname = strings.ReplaceAll(fname, ":", "_")
 	log.Debug("mock:Resolver:Open:", fname)
 	file, err := os.Open(fname)
 	if tracer != nil {
