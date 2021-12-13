@@ -29,9 +29,10 @@ the [FAQ](FAQ.md). The technically inclined may wish to download the
 
 (These badges are a "work in progress" while I grapple with a new CI provider - ignore for now)
 
-[![Build Status](https://travis-ci.org/markdingo/autoreverse.svg?branch=master)](https://travis-ci.org/markdingo/autoreverse)
+[![Build Status](https://github.com/markdingo/autoreverse/actions/workflows/build.yml/badge.svg)](https://github.com/markdingo/autoreverse/actions/workflows/build.yml)
+[![Test Status](https://github.com/markdingo/autoreverse/actions/workflows/test.yml/badge.svg)](https://github.com/markdingo/autoreverse/actions/workflows/test.yml)
+[![codecov](https://codecov.io/gh/markdingo/autoreverse/branch/main/graph/badge.svg?token=211OVOI2AV)](https://codecov.io/gh/markdingo/autoreverse)
 [![Go Report Card](https://goreportcard.com/badge/github.com/markdingo/autoreverse)](https://goreportcard.com/report/github.com/markdingo/autoreverse)
-[![codecov](https://codecov.io/gh/markdingo/autoreverse/branch/master/graph/badge.svg)](https://codecov.io/gh/markdingo/autoreverse)
 [![Go Reference](https://pkg.go.dev/badge/github.com/markdingo/autoreverse.svg)](https://pkg.go.dev/github.com/markdingo/autoreverse)
 
 ### Key Features of autoreverse
