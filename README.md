@@ -27,8 +27,6 @@ the [FAQ](FAQ.md). The technically inclined may wish to download the
 
 ### Project Status
 
-(These badges are a "work in progress" while I grapple with CI tools - ignore negative badges for now)
-
 [![Build Status](https://github.com/markdingo/autoreverse/actions/workflows/build.yml/badge.svg)](https://github.com/markdingo/autoreverse/actions/workflows/build.yml)
 [![Test Status](https://github.com/markdingo/autoreverse/actions/workflows/test.yml/badge.svg)](https://github.com/markdingo/autoreverse/actions/workflows/test.yml)
 [![codecov](https://codecov.io/gh/markdingo/autoreverse/branch/main/graph/badge.svg?token=211OVOI2AV)](https://codecov.io/gh/markdingo/autoreverse)
