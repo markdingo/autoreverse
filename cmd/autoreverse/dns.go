@@ -368,7 +368,7 @@ func (t *server) servePTR(wtr dns.ResponseWriter, req *request) bool {
 		}
 	}
 
-	// Truncate msg to fit max size. Only relevent if connection is UDP.
+	// Truncate msg to fit max size. Only relevant if connection is UDP.
 	if req.maxSize > 0 {
 		req.response.Truncate(int(req.maxSize)) // Removes excess RRs and sets TC=1 if needed
 	}

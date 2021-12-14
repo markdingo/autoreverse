@@ -38,7 +38,7 @@ func (t *Getter) Replace(newPtr *Database) {
 	t.Ptr = newPtr
 }
 
-// Current() returns the current database pointers under mutex protection.
+// Current returns the current database pointers under mutex protection.
 func (t *Getter) Current() *Database {
 	t.mu.RLock()
 	defer t.mu.RUnlock()

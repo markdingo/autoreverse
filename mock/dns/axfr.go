@@ -9,33 +9,36 @@ import (
 	"github.com/markdingo/autoreverse/dnsutil"
 )
 
+// AXFRResponse is what is set with the AxfrServer to define what the response will be for
+// its AXFR request.
 type AXFRResponse struct {
 	Rcode int
 }
 
-// Designed for a single DNS axfr request, a dumb server which loads the zone from a file
-// and sends it back. It checks as little as possible to do the job.
+// AxfrServer is a mock server designed for a single DNS axfr request, a dumb server which
+// loads the zone from a file and sends it back. It checks as little as possible to do the
+// job.
 type AxfrServer struct {
 	Path string
 	mu   sync.Mutex
 	resp *AXFRResponse
 }
 
-// Set a new response for the next query
+// SetResponse sets a new response for the axfr query
 func (t *AxfrServer) SetResponse(r *AXFRResponse) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	t.resp = r
 }
 
-// Return the current response as set
+// GetResponse returns the current response as set
 func (t *AxfrServer) GetResponse() *AXFRResponse {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	return t.resp
 }
 
-// Meets the interface definition for dns.Handler
+// ServeDNS meets the interface definition for dns.Handler
 func (t *AxfrServer) ServeDNS(wtr dns.ResponseWriter, q *dns.Msg) {
 	resp := t.GetResponse()
 	if resp == nil {

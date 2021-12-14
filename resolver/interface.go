@@ -35,6 +35,8 @@ func (t *exchangeConfig) Net() string     { return t.net }
 func (t *exchangeConfig) UDPSize() uint16 { return t.udpSize }
 func (t *exchangeConfig) setNet(s string) { t.net = s }
 
+// NewExchangeConfig creates a default configuration struct required by SingleExchange()
+// and FullExchange() to pass in parameters needed by miekg.
 func NewExchangeConfig() *exchangeConfig {
 	return &exchangeConfig{net: dnsutil.UDPNetwork, udpSize: dnsutil.MaxUDPSize}
 }

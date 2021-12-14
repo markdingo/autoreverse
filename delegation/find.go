@@ -13,12 +13,13 @@ import (
 	"github.com/markdingo/autoreverse/resolver"
 )
 
+// NewFinder constructs a Finder struct
 func NewFinder(r resolver.Resolver) *Finder {
 	return &Finder{resolver: r}
 }
 
-// FindAndProbe() attempts to find and verify the parent and target delegation material
-// for the name in the probe. There are three steps:
+// FindAndProbe attempts to find and verify the parent and target delegation material for
+// the name in the probe. There are three steps:
 //
 // 1) Find parents
 // 2) Query parents for target delegation details
@@ -194,7 +195,7 @@ func (t *Finder) findAuthorities(pr Probe) (pa, ta *Authority, err error) {
 			// It's possible that a buggy parent responded to the query
 			// incorrectly by providing a delegation to another domain it
 			// manages. Highly unlikely, but we don't what the wrong domain
-			// name to propogate thru autoreverse, so catch it here rather
+			// name to propagate thru autoreverse, so catch it here rather
 			// than let the bogus data enter the system.
 
 			if candidateTarget.Domain != pr.Target() {

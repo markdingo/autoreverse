@@ -6,8 +6,8 @@
 
 /*
 
-autoreverse is a specialized authoritative DNS server whose goal is to make it as easy as
-possible to auto-answer reverse queries without ever requiring reverse zone files.
+Package autoreverse is a specialized authoritative DNS server whose goal is to make it as
+easy as possible to auto-answer reverse queries without ever requiring reverse zone files.
 autoreverse synthesizes reverse answers and automatically derives PTR answers from
 specified forward zones.
 

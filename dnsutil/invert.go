@@ -45,8 +45,8 @@ func InvertPtrToIPv4(qName string) (net.IP, error) {
 	return ip, nil
 }
 
-// Given the first part of the reverse query name, convert it back into an ipv6 Address,
-// if possible. See discussion at convertToIPv4.
+// InvertPtrToIPv6 takes the first part of the reverse query name, and converts it back
+// into an ipv6 Address, if possible. See discussion of InvertPtrToIPv4.
 func InvertPtrToIPv6(qName string) (net.IP, error) {
 	reverse := strings.SplitN(qName, ".", 32)
 	if len(reverse) != 32 {

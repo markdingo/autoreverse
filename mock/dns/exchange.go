@@ -7,6 +7,8 @@ import (
 	"github.com/miekg/dns"
 )
 
+// ExchangeResponse is set by the caller to inform the ExchangeServer what the next
+// response should contain.
 type ExchangeResponse struct {
 	Ignore    bool
 	Truncated bool
@@ -18,28 +20,29 @@ type ExchangeResponse struct {
 	QueryCount int // Times mockDNSHandler served this mockExchangeResponse
 }
 
-// Designed for a single DNS exchange, a dumb server which copies response values into the
+// ExchangeServer is a mock replacement for a miekg dns.Handler. Used only for tests. It's
+// a dumb server which does nothing more than copies the ExchangeResponse values into the
 // reply message. It never checks the input or anything like that.
 type ExchangeServer struct {
 	mu   sync.Mutex
 	resp *ExchangeResponse
 }
 
-// Set a new response for the next query
+// SetResponse sets a new response for the next query
 func (t *ExchangeServer) SetResponse(r *ExchangeResponse) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	t.resp = r
 }
 
-// Return the current response as set
+// GetResponse returns the current response as set
 func (t *ExchangeServer) GetResponse() *ExchangeResponse {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	return t.resp
 }
 
-// Meets the interface definition for dns.Handler
+// ServeDNS meets the interface definition for dns.Handler
 func (t *ExchangeServer) ServeDNS(wtr dns.ResponseWriter, q *dns.Msg) {
 	resp := t.GetResponse()
 	if resp == nil {

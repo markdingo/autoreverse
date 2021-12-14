@@ -31,7 +31,7 @@ const (
 // flags. It surprises me that most are happy to silently accept this ambiguity. Or am I
 // missing some trivial setting regarding dupes?
 //
-// The usage ouput has generally been formated to fit within a 100 column terminal, tho
+// The usage output has generally been formated to fit within a 100 column terminal, tho
 // the old school manpages are formated at 80 columns. Given how much space is burnt with
 // the options, that limit would make the descriptions absurdly narrow. I guess the
 // obvious answer is that flags packages should be terminal width aware and "do the right

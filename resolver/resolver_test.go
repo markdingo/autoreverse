@@ -46,7 +46,7 @@ func TestResolver(t *testing.T) {
 		t.Error("No apple.com name servers are served in-house?")
 	}
 
-	nss, err = res.LookupNS(context.Background(), "broken name")
+	_, err = res.LookupNS(context.Background(), "broken name")
 	if err == nil {
 		t.Fatal("expected error return with borken name")
 	}

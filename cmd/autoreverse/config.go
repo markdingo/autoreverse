@@ -77,7 +77,7 @@ type config struct {
 	nsidAsHex string  // Encoding version
 	nsidOpt   dns.OPT // Ready to send version
 
-	user, group, chroot string // Priviledge constraints
+	user, group, chroot string // Privilege constraints
 
 	delegatedForward string   // Forward zone to discover delegation
 	localForward     string   // Forward zone with empty delegation

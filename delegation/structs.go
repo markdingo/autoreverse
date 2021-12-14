@@ -8,6 +8,8 @@ import (
 	"github.com/markdingo/autoreverse/resolver"
 )
 
+// Finder is the container used to manage FindAndProbe requests. As you can see, it merely
+// contains a resolver which may or may not offer some efficiencies to the find process.
 type Finder struct {
 	resolver resolver.Resolver
 }

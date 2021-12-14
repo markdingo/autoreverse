@@ -4,7 +4,7 @@ import (
 	"github.com/miekg/dns"
 )
 
-// Clone of real startServer code to start up a miekg DNS server.
+// StartServer is a clone of the real  code to start up a miekg DNS server.
 func StartServer(net, serverAddr string, h dns.Handler) *dns.Server {
 	srv := &dns.Server{Net: net, Addr: serverAddr, Handler: h}
 	hasStarted := make(chan struct{})

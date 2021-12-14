@@ -19,6 +19,7 @@ type resolver struct {
 	queryTries int
 }
 
+// NewResolver creates a fully formed resolver which is ready to use.
 func NewResolver() *resolver {
 	t := &resolver{
 		singleExchangeTimeout: defaultSingleExchangeTimeout,

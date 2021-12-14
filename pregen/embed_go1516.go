@@ -3,6 +3,7 @@
 
 package pregen
 
+// Manpage is the alternative offering on go version that don't support the embed package.
 var Manpage []byte = []byte(`
 Unfortunately the manpage is not available as this package was built with an old
 version of go. To include the manpage, please rebuild with go version 1.16 or later.

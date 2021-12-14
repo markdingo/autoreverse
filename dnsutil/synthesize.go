@@ -11,7 +11,9 @@ const (
 	obeyRFC = true
 )
 
-// Convert an IP address into a synthetic PTR.
+// SynthesizePTR converts an IP address into a synthetic PTR. Mainly it just string
+// substitutes ":" and "." in ip addresses to "-" which is an acceptable <domain-name>
+// character.
 //
 // According to rfc1035 Ptr has to hold a <domain-name> which is constrainted to
 // "let-dig-hyp", but I'll bet if the Ptr data contained "." and ":" (which would allow an

@@ -77,7 +77,9 @@ ru=ok q=NS/ns.example.net. s=127.0.0.2 id=1 h=U sz=76/1232 C=1/0/0 passthru
 func passReply(conn *net.UDPConn) {
 	defer conn.Close()
 	b := make([]byte, 512)
-	_, addr, err := conn.ReadFromUDP(b)
+	var addr *net.UDPAddr
+	var err error
+	_, _, err = conn.ReadFromUDP(b)
 	if err != nil {
 		return
 	}

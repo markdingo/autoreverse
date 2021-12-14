@@ -6,11 +6,13 @@ import (
 	"github.com/markdingo/autoreverse/dnsutil"
 )
 
-// Database is constructed with NewDatabase() and populated with Add()
+// Database is a PTR database constructed by NewDatabase() and populated with Add()
 type Database struct {
 	ptrMap map[string]map[string]dns.RR
 }
 
+// NewDatabase constructs a ready-to-use Database. Never use the default zero form as
+// there's an embedded map which needs to be made.
 func NewDatabase() *Database {
 	return &Database{
 		ptrMap: make(map[string]map[string]dns.RR),

@@ -82,7 +82,7 @@ func TestFormat(t *testing.T) {
 	var w mock.IOWriter
 	SetOut(&w)
 	SetLevel(MinorLevel)
-	// Need to trick the complier so it doesn't warn about %d
+	// Need to trick the compiler so it doesn't warn about %d
 	f := "%"
 	f += "d a "
 	Major(f, 5)       // Should not format

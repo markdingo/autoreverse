@@ -63,22 +63,23 @@ func SetLevel(l logLevel) {
 }
 
 // Level returns current level
-
 func Level() logLevel {
 	return level
 }
 
-// IfMajor returns true if Major logging is written to the output stream. Applications
-// have access to these If* functions in cases where evaluation of the log arguments is
-// expensive and the caller wishes to minimize that cost.
+// IfMajor returns true if Major logging is enabled. Applications have access to these If*
+// functions in cases where evaluation of the log arguments is expensive and the caller
+// wishes to minimize that cost.
 func IfMajor() bool {
 	return level >= MajorLevel
 }
 
+// IfMinor returns true if Minor or Major logging is enabled.
 func IfMinor() bool {
 	return level >= MinorLevel
 }
 
+// IfDebuf returns true if Debug, Minor or Major logging is enabled.
 func IfDebug() bool {
 	return level >= DebugLevel
 }
