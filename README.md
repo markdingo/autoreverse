@@ -27,7 +27,7 @@ the [FAQ](FAQ.md). The technically inclined may wish to download the
 
 ### Project Status
 
-(These badges are a "work in progress" while I grapple with a new CI provider - ignore for now)
+(These badges are a "work in progress" while I grapple with CI tools - ignore negative badges for now)
 
 [![Build Status](https://github.com/markdingo/autoreverse/actions/workflows/build.yml/badge.svg)](https://github.com/markdingo/autoreverse/actions/workflows/build.yml)
 [![Test Status](https://github.com/markdingo/autoreverse/actions/workflows/test.yml/badge.svg)](https://github.com/markdingo/autoreverse/actions/workflows/test.yml)
@@ -128,7 +128,7 @@ A likely invocation after this setup is something like:
 ```sh
 # autoreverse --forward autoreverse.yourdomain           \
               --listen 2001:db8::1 --listen 192.0.2.53   \
-              --reverse 2001:db8:aa:bb::53
+              --reverse 2001:db8:aa:bb::53/48
 ```
 
 and `autoreverse` will figure out the rest and start answering PTR queries.
