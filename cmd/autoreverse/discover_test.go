@@ -175,20 +175,24 @@ func testDREOne(t *testing.T, ix int, tc tdreCase) {
 	ar.delegatedReverses = append(ar.delegatedReverses, ipNet)
 	err = ar.discover()
 	if err != nil {
-		t.Log(out.String())
-		out.Reset()
 		if len(tc.contains) > 0 {
 			if !strings.Contains(err.Error(), tc.contains) {
 				t.Error(ix, tc.reverse, "Got wrong error. Wanted",
 					tc.contains, "got", err.Error())
+				t.Log(out.String())
+				out.Reset()
 			}
 		} else {
 			t.Error(ix, tc.reverse, "Unexpected error", err.Error())
+			t.Log(out.String())
+			out.Reset()
 		}
 		return
 	}
 	if len(tc.contains) > 0 {
 		t.Error(ix, tc.reverse, "Did not get error with: ", tc.contains)
+		t.Log(out.String())
+		out.Reset()
 		return
 	}
 }
