@@ -7,6 +7,7 @@ import (
 
 	"github.com/markdingo/autoreverse/database"
 	"github.com/markdingo/autoreverse/delegation"
+	"github.com/markdingo/autoreverse/dnsutil"
 	"github.com/markdingo/autoreverse/resolver"
 )
 
@@ -65,6 +66,10 @@ func newServer(cfg *config, dbGetter *database.Getter, r resolver.Resolver, netw
 		dbGetter: dbGetter,
 		network:  network,
 		address:  address,
+	}
+
+	if len(t.network) == 0 {
+		t.network = dnsutil.UDPNetwork
 	}
 
 	t.miekg = &dns.Server{Net: t.network, Addr: t.address, ReusePort: true, Handler: t}
