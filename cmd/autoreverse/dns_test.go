@@ -42,11 +42,11 @@ func TestFormErr(t *testing.T) {
 	t.Run("Wrong op-code", func(t *testing.T) { testInvalid(t, server, m) })
 
 	// Check the logging output while we're at it
-	exp := `ru=1-FORMERR q=None/ s=127.0.0.2 id=0 h=U sz=12/0 C=0/0/0 Malformed Query
-ru=1-FORMERR q=SOA/example.net. s=127.0.0.2 id=1 h=U sz=12/0 C=0/0/0 Malformed Query
-ru=1-FORMERR q=SOA/example.net. s=127.0.0.2 id=1 h=U sz=12/0 C=0/0/0 Malformed Query
-ru=1-FORMERR q=SOA/example.net. s=127.0.0.2 id=1 h=U sz=12/0 C=0/0/0 Malformed Query
-ru=1-FORMERR q=SOA/example.net. s=127.0.0.2 id=1 h=U sz=12/0 C=0/0/0 Malformed Query
+	exp := `ru=FORMERR q=None/ s=127.0.0.2 id=0 h=U sz=12/0 C=0/0/0 Malformed Query
+ru=FORMERR q=SOA/example.net. s=127.0.0.2 id=1 h=U sz=12/0 C=0/0/0 Malformed Query
+ru=FORMERR q=SOA/example.net. s=127.0.0.2 id=1 h=U sz=12/0 C=0/0/0 Malformed Query
+ru=FORMERR q=SOA/example.net. s=127.0.0.2 id=1 h=U sz=12/0 C=0/0/0 Malformed Query
+ru=FORMERR q=SOA/example.net. s=127.0.0.2 id=1 h=U sz=12/0 C=0/0/0 Malformed Query
 `
 	got := out.String()
 	if got != exp {
@@ -63,7 +63,7 @@ func testInvalid(t *testing.T, server *server, m *dns.Msg) {
 		t.Fatal("Setup failed")
 	}
 	if resp.Rcode != dns.RcodeFormatError {
-		t.Error("Expected format error, not", dns.RcodeToString[resp.Rcode])
+		t.Error("Expected format error, not", dnsutil.RcodeToString(resp.Rcode))
 	}
 }
 
@@ -92,7 +92,7 @@ func TestProbe(t *testing.T) {
 		t.Fatal("Setup error - No response to probe query")
 	}
 	if resp.Rcode != dns.RcodeRefused {
-		t.Error("Expected RcodeRefused, not", dns.RcodeToString[resp.Rcode])
+		t.Error("Expected RcodeRefused, not", dnsutil.RcodeToString(resp.Rcode))
 	}
 
 	query = new(dns.Msg)
@@ -106,14 +106,14 @@ func TestProbe(t *testing.T) {
 		t.Fatal("Setup error - No response to probe query")
 	}
 	if resp.Rcode != dns.RcodeSuccess {
-		t.Error("Expected RcodeSuccess, not", dns.RcodeToString[resp.Rcode])
+		t.Error("Expected RcodeSuccess, not", dnsutil.RcodeToString(resp.Rcode))
 	}
 	if !dnsutil.RRIsEqual(resp.Answer[0], pr.Answer()) {
 		t.Error("Probe response was not as expected", resp.Answer[0], pr.Answer())
 	}
 
 	// Check logging output
-	exp := `ru=5-REFUSED q=MX/example.org. s=127.0.0.2 id=2 h=U sz=40/1232 C=0/0/1 out of bailiwick
+	exp := `ru=REFUSED q=MX/example.org. s=127.0.0.2 id=2 h=U sz=40/1232 C=0/0/1 out of bailiwick
   Valid Probe received from 127.0.0.2
 ru=ok q=AAAA/cubyh.fozzy.example.net. s=127.0.0.2 id=1 h=U sz=103/1232 C=1/0/1 Probe match
 `
@@ -144,14 +144,32 @@ func TestWrongClass(t *testing.T) {
 		t.Fatal("Setup error - No response to HESIOD query")
 	}
 	if resp.Rcode != dns.RcodeRefused {
-		t.Error("Expected RcodeRefused, not", dns.RcodeToString[resp.Rcode])
+		t.Error("Expected RcodeRefused, not", dnsutil.RcodeToString(resp.Rcode))
 	}
 
 	// Check error logging
-	exp := "ru=5-REFUSED q=NS/ns.hs. s=127.0.0.2 id=1 h=U sz=34/1232 C=0/0/1 Wrong class HS\n"
+	exp := "ru=REFUSED q=NS/ns.hs. s=127.0.0.2 id=1 h=U sz=34/1232 C=0/0/1 Wrong class HS\n"
 	got := out.String()
 	if exp != got {
-		t.Error("Error log mismatch", got, exp)
+		t.Error("Error log mismatch. Got:", got, "Exp:", exp)
+	}
+
+	out.Reset()
+	query = setQuestion(2021, dns.TypeA, "2021.A.")
+	server.ServeDNS(wtr, query)
+	resp = wtr.Get()
+	if resp == nil {
+		t.Fatal("Setup error - No response to Class 2021 query")
+	}
+	if resp.Rcode != dns.RcodeRefused {
+		t.Error("Expected RcodeRefused, not", dnsutil.RcodeToString(resp.Rcode))
+	}
+
+	// Check error logging
+	exp = "ru=REFUSED q=A/2021.a. s=127.0.0.2 id=1 h=U sz=35/1232 C=0/0/1 Wrong class C-2021\n"
+	got = out.String()
+	if exp != got {
+		t.Error("Error log mismatch. Got:", got, "Exp:", exp)
 	}
 }
 
@@ -182,7 +200,7 @@ func TestServeBadPTR(t *testing.T) {
 	if resp == nil {
 		t.Error("Setup error - No response to PTR query")
 	} else if resp.Rcode != dns.RcodeNameError {
-		t.Error("Expected RcodeNameError, not", dns.RcodeToString[resp.Rcode])
+		t.Error("Expected RcodeNameError, not", dnsutil.RcodeToString(resp.Rcode))
 	}
 
 	cfg.synthesizeFlag = false
@@ -192,12 +210,12 @@ func TestServeBadPTR(t *testing.T) {
 	if resp == nil {
 		t.Error("Setup error - No response to PTR query")
 	} else if resp.Rcode != dns.RcodeNameError {
-		t.Error("Expected RcodeNameError, not", dns.RcodeToString[resp.Rcode])
+		t.Error("Expected RcodeNameError, not", dnsutil.RcodeToString(resp.Rcode))
 	}
 
 	// Check logging
-	exp := `ru=3-NXDOMAIN q=PTR/0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.f.f.f.f.d.2.d.f.ip6.arpa. s=127.0.0.2 id=1 h=U sz=130/1232 C=0/1/1
-ru=3-NXDOMAIN q=PTR/fd2d:ffff::1 s=127.0.0.2 id=1 h=U sz=134/1232 C=0/1/1 No Synth
+	exp := `ru=NXDOMAIN q=PTR/0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.f.f.f.f.d.2.d.f.ip6.arpa. s=127.0.0.2 id=1 h=U sz=130/1232 C=0/1/1
+ru=NXDOMAIN q=PTR/fd2d:ffff::1 s=127.0.0.2 id=1 h=U sz=134/1232 C=0/1/1 No Synth
 `
 
 	got := out.String()
@@ -264,7 +282,7 @@ func TestMisc(t *testing.T) {
 		t.Fatal("Setup error - No response to CHAOS query")
 	}
 	if resp.Rcode != dns.RcodeSuccess {
-		t.Error("Expected RcodeSuccess, not", dns.RcodeToString[resp.Rcode])
+		t.Error("Expected RcodeSuccess, not", dnsutil.RcodeToString(resp.Rcode))
 	}
 
 	nso := findNSID(resp)
@@ -286,7 +304,7 @@ func TestMisc(t *testing.T) {
 			continue
 		}
 		if resp.Rcode != dns.RcodeSuccess {
-			t.Error(ix, "Expected RcodeSuccess, not", dns.RcodeToString[resp.Rcode])
+			t.Error(ix, "Expected RcodeSuccess, not", dnsutil.RcodeToString(resp.Rcode))
 			continue
 		}
 		edns := resp.IsEdns0()
@@ -315,7 +333,7 @@ func TestMisc(t *testing.T) {
 		}
 
 		if resp.Rcode != dns.RcodeNameError {
-			t.Error(ix, "Expected NXDOMAIN, not", dns.RcodeToString[resp.Rcode])
+			t.Error(ix, "Expected NXDOMAIN, not", dnsutil.RcodeToString(resp.Rcode))
 			continue
 		}
 	}
@@ -326,12 +344,12 @@ ru=ok q=TXT/version.bind. s=127.0.0.2 id=1 h=U sz=77/1232 C=1/0/1
 ru=ok q=TXT/version.bind. s=127.0.0.2 id=1 h=U sz=77/600 C=1/0/1
 ru=ok q=TXT/version.bind. s=127.0.0.2 id=1 h=U sz=77/1231 C=1/0/1
 ru=ok q=TXT/version.bind. s=127.0.0.2 id=1 h=U sz=77/1232 C=1/0/1
-ru=3-NXDOMAIN q=A/192.0.2.misc.example.net. s=127.0.0.2 id=1 h=U sz=86/1232 C=0/1/1
-ru=3-NXDOMAIN q=A/192-0-2.misc.example.net. s=127.0.0.2 id=1 h=U sz=86/1232 C=0/1/1
-ru=3-NXDOMAIN q=A/fd2d::1.misc.example.net. s=127.0.0.2 id=1 h=U sz=86/1232 C=0/1/1
-ru=3-NXDOMAIN q=AAAA/fd2d::1.misc.example.net. s=127.0.0.2 id=1 h=U sz=86/1232 C=0/1/1
-ru=3-NXDOMAIN q=AAAA/fd2d--1--2.misc.example.net. s=127.0.0.2 id=1 h=U sz=89/1232 C=0/1/1
-ru=3-NXDOMAIN q=AAAA/192-0-2-1.misc.example.net. s=127.0.0.2 id=1 h=U sz=88/1232 C=0/1/1
+ru=NXDOMAIN q=A/192.0.2.misc.example.net. s=127.0.0.2 id=1 h=U sz=86/1232 C=0/1/1
+ru=NXDOMAIN q=A/192-0-2.misc.example.net. s=127.0.0.2 id=1 h=U sz=86/1232 C=0/1/1
+ru=NXDOMAIN q=A/fd2d::1.misc.example.net. s=127.0.0.2 id=1 h=U sz=86/1232 C=0/1/1
+ru=NXDOMAIN q=AAAA/fd2d::1.misc.example.net. s=127.0.0.2 id=1 h=U sz=86/1232 C=0/1/1
+ru=NXDOMAIN q=AAAA/fd2d--1--2.misc.example.net. s=127.0.0.2 id=1 h=U sz=89/1232 C=0/1/1
+ru=NXDOMAIN q=AAAA/192-0-2-1.misc.example.net. s=127.0.0.2 id=1 h=U sz=88/1232 C=0/1/1
 `
 	got := out.String()
 	if exp != got {
@@ -386,7 +404,7 @@ func TestGoodAnswers(t *testing.T) {
 			t.Fatal(ix, "Setup error - No response to PTR query")
 		}
 		if resp.Rcode != dns.RcodeSuccess {
-			t.Error(ix, "Expected RcodeSuccess, not", dns.RcodeToString[resp.Rcode])
+			t.Error(ix, "Expected RcodeSuccess, not", dnsutil.RcodeToString(resp.Rcode))
 			continue
 		}
 		if len(resp.Answer) != 1 {

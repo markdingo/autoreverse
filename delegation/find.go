@@ -165,7 +165,7 @@ func (t *Finder) findAuthorities(pr Probe) (pa, ta *Authority, err error) {
 			}
 			if r.MsgHdr.Rcode != dns.RcodeSuccess { // Odd return from parent
 				log.Debugf("Odd %s from parent %s/%s for %s/NS",
-					dns.RcodeToString[r.MsgHdr.Rcode], ns, ip.String(), q.Name)
+					dnsutil.RcodeToString(r.MsgHdr.Rcode), ns, ip.String(), q.Name)
 				continue
 			}
 			if !dnsutil.ValidDelegation(r) {

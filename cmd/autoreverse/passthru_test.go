@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/markdingo/autoreverse/database"
+	"github.com/markdingo/autoreverse/dnsutil"
 	"github.com/markdingo/autoreverse/log"
 	"github.com/markdingo/autoreverse/mock"
 	"github.com/markdingo/autoreverse/resolver"
@@ -56,7 +57,7 @@ func TestPassthru(t *testing.T) {
 	if resp == nil {
 		t.Error("Expected a response to second msg from passReply")
 	} else if resp.Rcode != dns.RcodeSuccess {
-		t.Error("Expected RcodeSuccess, not", dns.RcodeToString[resp.Rcode])
+		t.Error("Expected RcodeSuccess, not", dnsutil.RcodeToString(resp.Rcode))
 	} else {
 		if len(resp.Answer) != 1 && resp.Answer[0].Header().Rrtype != dns.TypeNS {
 			t.Error("Wrong response", len(resp.Answer), resp.Answer[0].Header().Rrtype)

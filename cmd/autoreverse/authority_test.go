@@ -8,6 +8,7 @@ import (
 
 	"github.com/markdingo/autoreverse/database"
 	"github.com/markdingo/autoreverse/delegation"
+	"github.com/markdingo/autoreverse/dnsutil"
 	"github.com/markdingo/autoreverse/mock"
 	"github.com/markdingo/autoreverse/resolver"
 )
@@ -49,7 +50,7 @@ func TestAuthority(t *testing.T) {
 	}
 	if resp.Rcode != dns.RcodeSuccess {
 		t.Error("Expected success for SOA lookup. got",
-			dns.RcodeToString[resp.Rcode], "\n", resp)
+			dnsutil.RcodeToString(resp.Rcode), "\n", resp)
 	}
 	if len(resp.Answer) != 1 || len(resp.Ns) != 2 || len(resp.Extra) < 1 {
 		t.Error("Expected 1,2,>=1 not", len(resp.Answer), len(resp.Ns), len(resp.Extra))
@@ -63,7 +64,7 @@ func TestAuthority(t *testing.T) {
 	}
 	if resp.Rcode != dns.RcodeSuccess {
 		t.Error("Expected success for SOA lookup. got",
-			dns.RcodeToString[resp.Rcode], "\n", resp)
+			dnsutil.RcodeToString(resp.Rcode), "\n", resp)
 	}
 	if len(resp.Answer) != 1 || len(resp.Ns) != 0 || len(resp.Extra) < 1 {
 		t.Error("Expected 1,0,>=1 not", len(resp.Answer), len(resp.Ns), len(resp.Extra))
@@ -77,7 +78,7 @@ func TestAuthority(t *testing.T) {
 	}
 	if resp.Rcode != dns.RcodeSuccess {
 		t.Error("Expected success for NS lookup. got",
-			dns.RcodeToString[resp.Rcode], "\n", resp)
+			dnsutil.RcodeToString(resp.Rcode), "\n", resp)
 	}
 	if len(resp.Answer) != 2 || len(resp.Ns) != 0 || len(resp.Extra) < 2 {
 		t.Error("Expected 2,0,>=20 not", len(resp.Answer), len(resp.Ns), len(resp.Extra))
@@ -99,7 +100,7 @@ func TestAuthority(t *testing.T) {
 	}
 	if resp.Rcode != dns.RcodeNameError {
 		t.Error("Expected NXDomain for MX lookup. got",
-			dns.RcodeToString[resp.Rcode], "\n", resp)
+			dnsutil.RcodeToString(resp.Rcode), "\n", resp)
 	}
 
 	q = setQuestion(dns.ClassINET, dns.TypeA, "ns2.autoreverse.example.net.")
@@ -110,7 +111,7 @@ func TestAuthority(t *testing.T) {
 	}
 	if resp.Rcode != dns.RcodeSuccess {
 		t.Error("Expected success for A lookup. got",
-			dns.RcodeToString[resp.Rcode], "\n", resp)
+			dnsutil.RcodeToString(resp.Rcode), "\n", resp)
 	}
 	if len(resp.Answer) != 1 || len(resp.Ns) != 0 || len(resp.Extra) < 1 {
 		t.Error("Expected 1,0,>0 not", len(resp.Answer), len(resp.Ns), len(resp.Extra))
@@ -132,7 +133,7 @@ func TestAuthority(t *testing.T) {
 	}
 	if resp.Rcode != dns.RcodeSuccess {
 		t.Error("Expected success for AAAA lookup. got",
-			dns.RcodeToString[resp.Rcode], "\n", resp)
+			dnsutil.RcodeToString(resp.Rcode), "\n", resp)
 	}
 	if len(resp.Answer) != 1 || len(resp.Ns) != 0 || len(resp.Extra) < 1 {
 		t.Error("Expected 1,0,>0 not", len(resp.Answer), len(resp.Ns), len(resp.Extra))
@@ -159,7 +160,7 @@ func TestAuthority(t *testing.T) {
 	}
 	if resp.Rcode != dns.RcodeSuccess {
 		t.Error("Expected success for SOA lookup. got",
-			dns.RcodeToString[resp.Rcode], "\n", resp)
+			dnsutil.RcodeToString(resp.Rcode), "\n", resp)
 	}
 
 	q = setQuestion(dns.ClassINET, dns.TypeNS, "example.net.")
@@ -170,7 +171,7 @@ func TestAuthority(t *testing.T) {
 	}
 	if resp.Rcode != dns.RcodeSuccess {
 		t.Error("Expected success for NS lookup. got",
-			dns.RcodeToString[resp.Rcode], "\n", resp)
+			dnsutil.RcodeToString(resp.Rcode), "\n", resp)
 	}
 
 	q = setQuestion(dns.ClassINET, dns.TypeA, "ns2.autoreverse.example.net.")
@@ -181,7 +182,7 @@ func TestAuthority(t *testing.T) {
 	}
 	if resp.Rcode != dns.RcodeNameError {
 		t.Error("Expected NXDomain for A lookup. got",
-			dns.RcodeToString[resp.Rcode], "\n", resp)
+			dnsutil.RcodeToString(resp.Rcode), "\n", resp)
 	}
 
 	q = setQuestion(dns.ClassINET, dns.TypeAAAA, "ns2.autoreverse.example.net.")
@@ -192,6 +193,6 @@ func TestAuthority(t *testing.T) {
 	}
 	if resp.Rcode != dns.RcodeNameError {
 		t.Error("Expected NXDomain for AAAA lookup. got",
-			dns.RcodeToString[resp.Rcode], "\n", resp)
+			dnsutil.RcodeToString(resp.Rcode), "\n", resp)
 	}
 }

@@ -66,12 +66,9 @@ func (t *request) log() {
 	if len(note) > 0 {
 		noteStr = " " + strings.Join(note, ":")
 	}
-	var rcodeStr string
-	if t.response.MsgHdr.Rcode == dns.RcodeSuccess {
-		rcodeStr = "ok"
-	} else {
-		rcodeStr = fmt.Sprintf("%d-%s",
-			t.response.MsgHdr.Rcode, dns.RcodeToString[t.response.MsgHdr.Rcode])
+	rcodeStr := "ok"
+	if t.response.MsgHdr.Rcode != dns.RcodeSuccess {
+		rcodeStr = dnsutil.RcodeToString(t.response.MsgHdr.Rcode)
 	}
 
 	hFlags := make([]byte, 0, 10) // 'h' = humongous?
@@ -97,8 +94,7 @@ func (t *request) log() {
 	}
 
 	fmt.Fprintf(log.Out(), "ru=%s q=%s/%s s=%s id=%d h=%s sz=%d/%d C=%d/%d/%d%s\n",
-		rcodeStr,
-		dns.TypeToString[t.question.Qtype], t.logQName,
+		rcodeStr, dnsutil.TypeToString(t.question.Qtype), t.logQName,
 		t.src.String(),
 		t.response.MsgHdr.Id, string(hFlags), t.msgSize, t.maxSize,
 		len(t.response.Answer), len(t.response.Ns), len(t.response.Extra), noteStr)

@@ -62,7 +62,7 @@ func LogExchangeA(server string, question dns.Question, r *dns.Msg, err error) {
 	} else {
 		log.Debugf("miekg E:%s/%s/%s %s",
 			server, dnsutil.ChompCanonicalName(question.Name),
-			dns.TypeToString[question.Qtype],
+			dnsutil.TypeToString(question.Qtype),
 			dnsutil.ShortenLookupError(err).Error())
 	}
 }

@@ -6,6 +6,7 @@ import (
 	"github.com/miekg/dns"
 
 	"github.com/markdingo/autoreverse/database"
+	"github.com/markdingo/autoreverse/dnsutil"
 )
 
 func TestDatabaseAdd(t *testing.T) {
@@ -37,8 +38,8 @@ func TestDatabaseAdd(t *testing.T) {
 			p := pRR.(*dns.PTR)
 			if p.Hdr.Class != dns.ClassINET || p.Hdr.Rrtype != dns.TypePTR {
 				t.Error("PTR class/Type should match",
-					dns.ClassToString[p.Hdr.Class],
-					dns.TypeToString[p.Hdr.Rrtype])
+					dnsutil.ClassToString(dns.Class(p.Hdr.Class)),
+					dnsutil.TypeToString(p.Hdr.Rrtype))
 			}
 			names = append(names, p.Ptr)
 			if p.Ptr == "a.example.net." {

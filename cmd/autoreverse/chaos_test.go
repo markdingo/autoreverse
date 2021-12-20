@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/markdingo/autoreverse/database"
+	"github.com/markdingo/autoreverse/dnsutil"
 	"github.com/markdingo/autoreverse/log"
 	"github.com/markdingo/autoreverse/mock"
 	"github.com/markdingo/autoreverse/pregen"
@@ -44,7 +45,7 @@ func TestChaos(t *testing.T) {
 	}
 
 	// Check error logging
-	exp := "ru=5-REFUSED q=NS/version.bind. s=127.0.0.2 id=1 h=U sz=41/1232 C=0/0/1 Wrong class CH\n"
+	exp := "ru=REFUSED q=NS/version.bind. s=127.0.0.2 id=1 h=U sz=41/1232 C=0/0/1 Wrong class CH\n"
 	got := out.String()
 	if exp != got {
 		t.Error("Error log mismatch", got, exp)
@@ -61,11 +62,11 @@ func TestChaos(t *testing.T) {
 		t.Fatal("Setup error - No response to chaos query")
 	}
 	if resp.Rcode != dns.RcodeRefused {
-		t.Error("Expected RcodeRefused, not", dns.RcodeToString[wtr.Get().Rcode])
+		t.Error("Expected RcodeRefused, not", dnsutil.RcodeToString(wtr.Get().Rcode))
 	}
 
 	// Check error logging
-	exp = "ru=5-REFUSED q=TXT/version.bind. s=127.0.0.2 id=2 h=U sz=41/1232 C=0/0/1 Wrong class CH\n"
+	exp = "ru=REFUSED q=TXT/version.bind. s=127.0.0.2 id=2 h=U sz=41/1232 C=0/0/1 Wrong class CH\n"
 	got = out.String()
 	if exp != got {
 		t.Error("Error log mismatch", got, exp)
@@ -89,7 +90,8 @@ func TestChaos(t *testing.T) {
 		if resp.Rcode != dns.RcodeSuccess {
 			if len(tc.out) > 0 { // Expect an error if no response expected
 				t.Error(ix,
-					"Expected RcodeSuccess, not", dns.RcodeToString[wtr.Get().Rcode])
+					"Expected RcodeSuccess, not",
+					dnsutil.RcodeToString(wtr.Get().Rcode))
 			}
 			continue
 		}
@@ -118,7 +120,7 @@ ru=ok q=TXT/version.server. s=127.0.0.2 id=4 h=U sz=87/1232 C=1/0/1
 ru=ok q=TXT/authors.bind. s=127.0.0.2 id=5 h=U sz=76/1232 C=1/0/1
 ru=ok q=TXT/hostname.bind. s=127.0.0.2 id=6 h=U sz=73/1232 C=1/0/1
 ru=ok q=TXT/id.server. s=127.0.0.2 id=7 h=U sz=65/1232 C=1/0/1
-ru=5-REFUSED q=TXT/nope. s=127.0.0.2 id=8 h=U sz=33/1232 C=0/0/1
+ru=REFUSED q=TXT/nope. s=127.0.0.2 id=8 h=U sz=33/1232 C=0/0/1
 `
 	got = out.String()
 	if exp != got {

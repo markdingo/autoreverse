@@ -31,19 +31,19 @@ func PrettyMsg1(m *dns.Msg) string {
 	nTypes := make([]string, 0)
 	eTypes := make([]string, 0)
 	for _, q := range m.Question {
-		qTypes = append(qTypes, dns.TypeToString[q.Qtype])
+		qTypes = append(qTypes, TypeToString(q.Qtype))
 	}
 	for _, rr := range m.Answer {
-		aTypes = append(aTypes, dns.TypeToString[rr.Header().Rrtype])
+		aTypes = append(aTypes, TypeToString(rr.Header().Rrtype))
 	}
 	for _, rr := range m.Ns {
-		nTypes = append(nTypes, dns.TypeToString[rr.Header().Rrtype])
+		nTypes = append(nTypes, TypeToString(rr.Header().Rrtype))
 	}
 	for _, rr := range m.Extra {
-		eTypes = append(eTypes, dns.TypeToString[rr.Header().Rrtype])
+		eTypes = append(eTypes, TypeToString(rr.Header().Rrtype))
 	}
 	return fmt.Sprintf("%d f=%s %s Q=%d-%s Ans=%d-%s Ns=%d-%s Extra=%d-%s",
-		h.Id, strings.Join(flags, "+"), dns.RcodeToString[h.Rcode],
+		h.Id, strings.Join(flags, "+"), RcodeToString(h.Rcode),
 		len(m.Question), strings.Join(qTypes, ","),
 		len(m.Answer), strings.Join(aTypes, ","),
 		len(m.Ns), strings.Join(nTypes, ","),
@@ -53,8 +53,8 @@ func PrettyMsg1(m *dns.Msg) string {
 // PrettyQuestion returns a compact representation of the dns.Question
 func PrettyQuestion(q dns.Question) string {
 	return fmt.Sprintf("%s/%s %s",
-		dns.ClassToString[q.Qclass],
-		dns.TypeToString[q.Qtype],
+		ClassToString(dns.Class(q.Qclass)),
+		TypeToString(q.Qtype),
 		q.Name)
 }
 
@@ -64,8 +64,8 @@ func PrettyNS(rr *dns.NS, includeName bool) (s string) {
 		s = rr.Hdr.Name + " "
 	}
 	s += fmt.Sprintf("%s/%s %d %s",
-		dns.ClassToString[rr.Hdr.Class],
-		dns.TypeToString[rr.Hdr.Rrtype],
+		ClassToString(dns.Class(rr.Hdr.Class)),
+		TypeToString(rr.Hdr.Rrtype),
 		rr.Hdr.Ttl, rr.Ns)
 	return
 }
@@ -88,8 +88,8 @@ func PrettySOA(rr *dns.SOA, includeName bool) (s string) {
 		s = rr.Hdr.Name + " "
 	}
 	s += fmt.Sprintf("%s/%s %d %s %s %d %d %d %d %d",
-		dns.ClassToString[rr.Hdr.Class],
-		dns.TypeToString[rr.Hdr.Rrtype], rr.Hdr.Ttl, rr.Ns,
+		ClassToString(dns.Class(rr.Hdr.Class)),
+		TypeToString(rr.Hdr.Rrtype), rr.Hdr.Ttl, rr.Ns,
 		rr.Mbox, rr.Serial, rr.Refresh, rr.Retry, rr.Expire,
 		rr.Minttl)
 	return
@@ -101,8 +101,8 @@ func PrettyAAAA(rr *dns.AAAA, includeName bool) (s string) {
 		s = rr.Hdr.Name + " "
 	}
 	s += fmt.Sprintf("%s/%s %d %s",
-		dns.ClassToString[rr.Hdr.Class],
-		dns.TypeToString[rr.Hdr.Rrtype],
+		ClassToString(dns.Class(rr.Hdr.Class)),
+		TypeToString(rr.Hdr.Rrtype),
 		rr.Hdr.Ttl, rr.AAAA.String())
 	return
 }
@@ -113,8 +113,8 @@ func PrettyA(rr *dns.A, includeName bool) (s string) {
 		s = rr.Hdr.Name + " "
 	}
 	s += fmt.Sprintf("%s/%s %d %s",
-		dns.ClassToString[rr.Hdr.Class],
-		dns.TypeToString[rr.Hdr.Rrtype],
+		ClassToString(dns.Class(rr.Hdr.Class)),
+		TypeToString(rr.Hdr.Rrtype),
 		rr.Hdr.Ttl, rr.A.String())
 	return
 }
@@ -125,8 +125,8 @@ func PrettyPTR(rr *dns.PTR, includeName bool) (s string) {
 		s = rr.Hdr.Name + " "
 	}
 	s += fmt.Sprintf("%s/%s %d %s",
-		dns.ClassToString[rr.Hdr.Class],
-		dns.TypeToString[rr.Hdr.Rrtype],
+		ClassToString(dns.Class(rr.Hdr.Class)),
+		TypeToString(rr.Hdr.Rrtype),
 		rr.Hdr.Ttl, rr.Ptr)
 	return
 }

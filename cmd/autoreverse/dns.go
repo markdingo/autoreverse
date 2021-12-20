@@ -112,7 +112,8 @@ func (t *server) ServeDNS(wtr dns.ResponseWriter, query *dns.Msg) {
 	// processing.
 
 	if req.question.Qclass != dns.ClassINET { // Only serve INET henceforth
-		req.logNote = "Wrong class " + dns.ClassToString[req.question.Qclass]
+		req.logNote = fmt.Sprintf("Wrong class %s",
+			dnsutil.ClassToString(dns.Class(req.question.Qclass)))
 		t.serveRefused(wtr, req)
 		req.stats.gen.wrongClass++
 		return
