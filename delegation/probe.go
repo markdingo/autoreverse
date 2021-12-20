@@ -16,7 +16,7 @@ const (
 	niceShortTTL = 3 // Just in case a cache tries to intervene
 )
 
-// zoneCutIterator is a faux iterator for zone cut searching: See Probe.Begin() and
+// zoneCutIterator is a faux iterator for zone cut searching: See Probe.Begin(),
 // Probe.End() and Probe.Next() for how we implement a C++ iterator in go.
 type zoneCutIterator struct {
 	ix int
@@ -82,10 +82,10 @@ func init() {
 	rand.Seed(time.Now().UnixNano())
 }
 
-// Generate a string of 'n' random alpha characters. Use an array of "universal"
-// characters so that this code works for ASCII, FIELDATA and EBCDIC. Future-proofing and
-// all that... If this string is used to create a qName, make sure to clean up the case
-// with a call to dns.CanonicalName().
+// randomAlphas creates a string of 'n' random alpha characters. It uses an array of
+// "universal" characters so that this code works for ASCII, FIELDATA and
+// EBCDIC. Future-proofing and all that... If this string is used to create a qName, make
+// sure to clean up the case with a call to dns.CanonicalName().
 func randomAlphas(n int) string {
 	const randAlphaSet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 	alphas := make([]byte, 0, n)
@@ -96,6 +96,7 @@ func randomAlphas(n int) string {
 	return string(alphas)
 }
 
+// randomHex creates a string of 'n' random hexadecimal characters.
 func randomHex(n int) string {
 	const randHexSet = "01234567890abcdef"
 	hex := make([]byte, 0, n)
@@ -118,8 +119,7 @@ func (t *commonProbe) Answer() dns.RR {
 	return t.answer
 }
 
-// NewForwardProbe generates a conservative, semi-random AAAA RR and corresponding
-// question.
+// NewForwardProbe creates a conservative, semi-random AAAA RR and corresponding question.
 func NewForwardProbe(target string) *forwardProbe {
 	t := &forwardProbe{}
 	t.target = dns.CanonicalName(target)
@@ -156,9 +156,8 @@ func NewForwardProbe(target string) *forwardProbe {
 	return t
 }
 
-// NewReverseProbe generates a conservative, semi-random PTR and corresponding question
-// which hopefully has the same likelihood of success as that of a forward
-// prone.
+// NewReverseProbe creates a conservative, semi-random PTR and corresponding question
+// which hopefully has the same likelihood of success as that of a forward prone.
 //
 // The target zone is based on the prefix length of the supplied CIDR. Ultimately the
 // target zone must be a real domain which is delegated back to this program instance for
@@ -236,8 +235,7 @@ func NewReverseProbe(ptrText string, ipNet *net.IPNet) *reverseProbe {
 }
 
 // QuestionMatches returns true if the question matches the probe. This is normally asked
-// by the dispatching side of things to determine whether to send the answer as a
-// response.
+// by the server-side to determine whether to send the answer as a response.
 func (t *commonProbe) QuestionMatches(match dns.Question) bool {
 	return match.Qclass == t.answer.Header().Class &&
 		match.Qtype == t.answer.Header().Rrtype &&
@@ -251,11 +249,12 @@ func (t *commonProbe) AnswerMatches(match dns.RR) bool {
 	return dnsutil.RRIsEqual(match, t.answer)
 }
 
-// Begin returns a zoneLabel iterator for walking up the DNS tree
+// Begin returns a zoneCutIterator for walking up the DNS tree.
 func (t *commonProbe) Begin() (iter zoneCutIterator) {
 	return
 }
 
+// Next moves the zoneCutIterator to the next item.
 func (t *commonProbe) Next(iter zoneCutIterator) zoneCutIterator {
 	if iter.ix < t.end.ix {
 		iter.ix++
@@ -269,8 +268,8 @@ func (t *commonProbe) End() zoneCutIterator {
 	return t.end
 }
 
-// Zone returns the current zone less any prefix labels previously consumed by Pop(). An
-// empty string is returned if the Probe has popped past the minimum.
+// Zone returns the current zone relative to the supplied iterator. An empty string is
+// returned if the Probe has iterated past the End() of the Probe.
 func (t *commonProbe) Zone(iter zoneCutIterator) string {
 	if iter.ix >= t.end.ix {
 		return ""

@@ -11,8 +11,8 @@ import (
 	"github.com/markdingo/autoreverse/resolver"
 )
 
-// Authority contains the delegated and synthetic SOA details so an auth server can
-// respond to SOA DNS requests. In authority is considered valid if there is at least one
+// Authority contains the delegated and synthetic SOA details so our auth server can
+// respond to SOA DNS requests. An Authority is considered valid if there is at least one
 // resolved address for the name servers. If some name servers happen to be "lame", that
 // doesn't invalidate the authority - tho of course it reduces their availability and
 // effectiveness.
@@ -122,7 +122,7 @@ func (t *Authority) IsCompletelyLame() bool {
 	return true
 }
 
-// Convert LookupNS results into dns.RRs
+// newNS converts LookupNS results into dns.RRs
 func newNS(qName, nsName string) *dns.NS {
 	rr := new(dns.NS)
 	rr.Hdr.Name = qName
@@ -134,7 +134,7 @@ func newNS(qName, nsName string) *dns.NS {
 	return rr
 }
 
-// Convert LookupIPAddr results into dns.RRs
+// newAAAA converts LookupIPAddr results into dns.RRs
 func newAAAA(qName string, ip net.IP) *dns.AAAA {
 	rr := new(dns.AAAA)
 	rr.Hdr.Name = qName
@@ -146,7 +146,7 @@ func newAAAA(qName string, ip net.IP) *dns.AAAA {
 	return rr
 }
 
-// Convert LookupIPAddr results into dns.RRs
+// newA converts LookupIPAddr results into dns.RRs
 func newA(qName string, ip net.IP) *dns.A {
 	rr := new(dns.A)
 	rr.Hdr.Name = qName

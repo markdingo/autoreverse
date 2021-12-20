@@ -6,9 +6,9 @@ import (
 	"strings"
 )
 
-// InvertPtrToIP extract and inverts the purported IP address from a reverse qName. Like
+// InvertPtrToIP extracts and inverts the purported IP address from a reverse qName. Like
 // any name in the DNS, a reverse qName does not *have* to represent an IP address, but
-// this code ignores all else. Return an error if an IP address cannt be extracted.
+// this code ignores all else. Return an error if an IP address cannot be extracted.
 func InvertPtrToIP(qName string) (net.IP, error) {
 	if strings.HasSuffix(qName, V4Suffix) {
 		return InvertPtrToIPv4(strings.TrimSuffix(qName, V4Suffix))
@@ -87,8 +87,9 @@ func InvertPtrToIPv6(qName string) (net.IP, error) {
 	return ip, nil
 }
 
-// Convert an ipv4 decimal octet to an int. Be tough. Return -1 if conversion fails. No
-// leading zeroes, range 0-255, no non-digit characters, terminators or otherwise.
+// convertDecimalOctet converts an ipv4 decimal octet to an int. But it's tough.  Return
+// -1 if conversion fails. No leading zeroes, range 0-255, no non-digit characters,
+// terminators or otherwise.
 func convertDecimalOctet(s string) (ret int) {
 	if len(s) == 0 || len(s) > 3 {
 		return -1

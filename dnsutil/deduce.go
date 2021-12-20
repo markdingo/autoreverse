@@ -6,9 +6,9 @@ import (
 
 // DeducePtr converts a dns.A/AAAA RR into a dns.PTR and returns the RR if it's already a
 // recognizable/convertable PTR. If the wrong type of RR is supplied a nil value is
-// returned. The "key" value is effectively the IP address regardless of the RR type. It
-// can be used by callers who want to reference the PTR via the original or extracted IP
-// address.
+// returned. The "key" value is effectively the IP address expressed as a string
+// regardless of the RR type. It can be used by callers who want to reference the PTR via
+// the original or extracted IP address.
 func DeducePtr(rr dns.RR) (ptr *dns.PTR, key string) {
 	switch rrt := rr.(type) {
 	case *dns.A:

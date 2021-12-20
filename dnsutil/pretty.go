@@ -142,8 +142,8 @@ func PrettyRRSet(rrs []dns.RR, includeName bool) (s string) {
 	return strings.Join(ar, ", ")
 }
 
-// PrettyRR returns a compact representation of the single RRs. Known RRs use the other
-// pretty functions while unknown RRs use the general rendering offered by miekg.
+// PrettyRR returns a compact representation of the single RR. Known RR-types use the
+// other pretty functions while unknown RRs use the general rendering offered by miekg.
 func PrettyRR(rr dns.RR, includeName bool) string {
 	switch rrt := rr.(type) {
 	case *dns.NS:

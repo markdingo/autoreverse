@@ -26,7 +26,7 @@ func NewFinder(r resolver.Resolver) *Finder {
 // 3) Probe target name servers to self-identify
 //
 // As per the usual go idiom, if error is returned nothing can be said about the contents
-// of Resuits. An error return is pretty catastrophic as it usually means an underlying
+// of Results. An error return is pretty catastrophic as it usually means an underlying
 // package has failed unexpectedly. Most "errors" are likely to be lookup or probe
 // failures which are indicated in Results rather than via an error return.
 //
@@ -94,7 +94,7 @@ func (t *Finder) FindAndProbe(pr Probe) (R Results, err error) {
 // of the delegation details for the parent/delegating domain.
 //
 // That means finding the parent's name servers and directly querying them for the target
-// NSes and their addresses - if in-bailiwick of the parents. if the delegating name
+// NSes and their addresses - if in-bailiwick of the parents. If the delegating name
 // servers are out-of-bailiwick the resolver is used to find their addresses.
 //
 // The end result of gathering these target delegation details is that the caller can
@@ -117,7 +117,7 @@ func (t *Finder) findAuthorities(pr Probe) (pa, ta *Authority, err error) {
 		return
 	}
 
-	// Populate parent Authority. The caller can now rely on the parent Authority for
+	// Populate Parent Authority. The caller can now rely on the Parent Authority for
 	// whatever purpose they have in mind, even if the target ends up not returning an
 	// Authority. The names returned by LookupNS() are converted into dns.RRs by
 	// newNS().
@@ -127,7 +127,7 @@ func (t *Finder) findAuthorities(pr Probe) (pa, ta *Authority, err error) {
 		pa.NS = append(pa.NS, newNS(parent, host))
 	}
 
-	// Having found the parent, use it's details to populate the target.
+	// Having found the parent, use its details to populate the target.
 
 	// Iterate over the parent's name server names first resolving their address(es)
 	// then querying each address for NS details of the target. Once the target NS
@@ -183,7 +183,7 @@ func (t *Finder) findAuthorities(pr Probe) (pa, ta *Authority, err error) {
 			// if none of the name servers have addresses and thus the
 			// authority is not of much value.
 
-			// The target authority is populated from this delegation material
+			// The Target Authority is populated from this delegation material
 			// and the subsequent name server lookups. This includes the
 			// actual delegation domain as returned by the parent. It is the
 			// resonsibility of the caller to check that this is what they
@@ -194,7 +194,7 @@ func (t *Finder) findAuthorities(pr Probe) (pa, ta *Authority, err error) {
 
 			// It's possible that a buggy parent responded to the query
 			// incorrectly by providing a delegation to another domain it
-			// manages. Highly unlikely, but we don't what the wrong domain
+			// manages. Highly unlikely, but we don't want the wrong domain
 			// name to propagate thru autoreverse, so catch it here rather
 			// than let the bogus data enter the system.
 
@@ -215,9 +215,9 @@ func (t *Finder) findAuthorities(pr Probe) (pa, ta *Authority, err error) {
 
 // findZoneCut walks up the DNS from the parents of the target towards the root trying to
 // find the zone cut for the target domain. It returns an error if a cut isn't found by the
-// top of the search - as dictated by the Probe.
+// top of the search - as dictated by the probe.
 //
-// The probe has constructed the start point where it sees fit, but normally that's one label
+// The probe has created the start point where it sees fit, but normally that's one label
 // up from the target domain.
 //
 // The reason for walking rather than relying on a single query is that delegation does

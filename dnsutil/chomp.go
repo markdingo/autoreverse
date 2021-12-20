@@ -5,7 +5,7 @@ import (
 )
 
 // ChompCanonicalName makes a name canonical but loses the trailing dot. For logging and
-// mock processing where zones names are often converted to file names, the trailing dot
+// mock processing, where zones names are often converted to file names, the trailing dot
 // is more of a hindrance than a help, so this helps.
 func ChompCanonicalName(n string) string {
 	n = dns.CanonicalName(n)

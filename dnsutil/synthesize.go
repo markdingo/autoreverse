@@ -20,7 +20,7 @@ const (
 // *exact* representation of the query address) that almost nothing would care. If you
 // want to toy with that idea, set obeyRFC to false.
 //
-// The suffix parameter is canonical.
+// The suffix parameter is assumeded to be canonical.
 func SynthesizePTR(qname, suffix string, ip net.IP) *dns.PTR {
 	ptr := new(dns.PTR)
 	ptr.Hdr.Name = qname
