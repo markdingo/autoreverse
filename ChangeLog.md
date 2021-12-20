@@ -1,4 +1,5 @@
 # autoreverse Change Log
+  * Add a trigger reason to the zone reload log message
   * Use dnsutil.*ToString instead of dns.*ToString to render unmapped values
   * Fix most concerns expressed by https://goreportcard.com/
 ### v1.0.1 -- 2021-12-14

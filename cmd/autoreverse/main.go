@@ -89,7 +89,7 @@ func main() {
 
 	ar.Constrain() // setuid/setgid/chroot
 
-	if !ar.loadAllZones(ar.cfg.PTRZones) {
+	if !ar.loadAllZones(ar.cfg.PTRZones, "Initial load") {
 		fatal(nil, "Cannot continue due to failed -PTRZone load")
 	}
 

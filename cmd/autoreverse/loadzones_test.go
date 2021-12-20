@@ -85,7 +85,7 @@ func TestLoadFromFile(t *testing.T) {
 			t.Fatal(ix, "Setup error", err)
 		}
 		ar.cfg.PTRZones = append(ar.cfg.PTRZones, pz)
-		good := ar.loadAllZones(ar.cfg.PTRZones)
+		good := ar.loadAllZones(ar.cfg.PTRZones, "TestLoadFromFile")
 		if good && !tc.good {
 			t.Error(ix, "Good return when expected fail", tc.zone)
 			continue
@@ -167,7 +167,7 @@ func TestLoadFromAXFR(t *testing.T) {
 		}
 		ar.cfg.PTRZones = append(ar.cfg.PTRZones, pz)
 
-		good := ar.loadAllZones(ar.cfg.PTRZones)
+		good := ar.loadAllZones(ar.cfg.PTRZones, "TestLoadFromAXFR")
 		if !good {
 			if tc.good {
 				t.Error(ix, url, "Expected good load from", url)
@@ -237,7 +237,7 @@ func TestOtherLoadErrors(t *testing.T) {
 		t.Fatal("Setup error", err)
 	}
 	ar.cfg.PTRZones = append(ar.cfg.PTRZones, pz)
-	if ar.loadAllZones(ar.cfg.PTRZones) {
+	if ar.loadAllZones(ar.cfg.PTRZones, "TestOtherLoadErrors") {
 		t.Fatal("Did not expect load to succeed")
 	}
 
@@ -255,7 +255,7 @@ func TestOtherLoadErrors(t *testing.T) {
 		t.Fatal("Setup error", err)
 	}
 	ar.cfg.PTRZones = append(ar.cfg.PTRZones, pz)
-	if ar.loadAllZones(ar.cfg.PTRZones) {
+	if ar.loadAllZones(ar.cfg.PTRZones, "TestOtherLoadErrors") {
 		t.Fatal("Did not expect load to succeed")
 	}
 
@@ -331,7 +331,7 @@ func TestLoadFromHTTP(t *testing.T) {
 				t.Fatal("Setup error: all urls are meant to be legit", err)
 			}
 			ar.cfg.PTRZones = append(ar.cfg.PTRZones, pz)
-			good := ar.loadAllZones(ar.cfg.PTRZones)
+			good := ar.loadAllZones(ar.cfg.PTRZones, "TestLoadFromHTTP")
 			if !good {
 				if tc.good {
 					t.Error(ix, "Expected good load from", url)

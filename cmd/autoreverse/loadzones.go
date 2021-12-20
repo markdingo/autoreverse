@@ -160,8 +160,8 @@ func (t *PTRZone) loadFromAXFR(db *database.Database) error {
 	return nil
 }
 
-// Populate the reverse PTR database with all forward names and PTRs found in the external
-// zones. Return the number of errors detected.
+// loadAllZones populates the reverse PTR database with all forward names and PTRs found
+// in the external zones. Return the number of errors detected.
 //
 // No checking is made to ensure that the deduced PTRs are within any zones of authority
 // so this may load more PTRs than it strictly should, but it's simpler code this way. The
@@ -170,7 +170,7 @@ func (t *PTRZone) loadFromAXFR(db *database.Database) error {
 // about load ordering.
 //
 // Return true if load was successful
-func (t *autoReverse) loadAllZones(pzs []*PTRZone) bool {
+func (t *autoReverse) loadAllZones(pzs []*PTRZone, trigger string) bool {
 	newDB := database.NewDatabase()
 	var errorCount int
 	for _, pz := range pzs {
@@ -201,7 +201,8 @@ func (t *autoReverse) loadAllZones(pzs []*PTRZone) bool {
 	if errorCount > 0 {
 		log.Major("LoadAllZones Errors: ", errorCount, " - load abandoned.")
 	} else {
-		log.Major("LoadAllZones Total Deduced PTRs: ", newDB.Count())
+		log.Majorf("LoadAllZones Total Deduced PTRs: %d. Trigger: %s\n",
+			newDB.Count(), trigger)
 		t.dbGetter.Replace(newDB) // Only replace if no errors in any zone
 	}
 
@@ -270,19 +271,21 @@ func (t *autoReverse) watchForZoneReloads(pzs []*PTRZone, interval time.Duration
 			return
 
 		case <-t.forceReload:
-			t.loadAllZones(pzs)
+			t.loadAllZones(pzs, "force reload")
 
 		case now := <-ticker.C:
-			if t.checkForReload(pzs, now) {
-				t.loadAllZones(pzs)
+			trigger := t.checkForReload(pzs, now)
+			if len(trigger) > 0 {
+				t.loadAllZones(pzs, trigger)
 			}
 		}
 	}
 }
 
-// Return true if a reload should be attempted. As soon as one condition determines that a
-// reload is necessary then return that fact. Don't bother to check any others.
-func (t *autoReverse) checkForReload(pzs []*PTRZone, now time.Time) bool {
+// checkForReload returns a trigger reason if a reload should be attempted. As soon as one
+// condition determines that a reload is necessary then return that fact. Don't bother to
+// check any others.
+func (t *autoReverse) checkForReload(pzs []*PTRZone, now time.Time) string {
 	for _, pz := range pzs {
 		switch pz.scheme {
 		case fileScheme:
@@ -293,17 +296,17 @@ func (t *autoReverse) checkForReload(pzs []*PTRZone, now time.Time) bool {
 			}
 			if fi.ModTime().After(pz.dtm) {
 				log.Debug(pz.path, "DTM triggers reload")
-				return true
+				return pz.url
 			}
 
 		case axfrScheme, httpScheme:
 			nextLoad := pz.loadTime.Add(time.Second * time.Duration(pz.soa.Refresh))
 			if now.After(nextLoad) {
 				log.Debug(pz.domain, "Expired Refresh triggers reload")
-				return true
+				return pz.url
 			}
 		}
 	}
 
-	return false
+	return ""
 }
