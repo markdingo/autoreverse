@@ -272,9 +272,10 @@ DESCRIPTION
 Note: --listen, --local-reverse, --reverse and --PTR-deduce can be repeated multiple times.
 
 SIGNALS
-  SIGHUP - reload all -PTR-deduce urls
+  SIGHUP  - reload all -PTR-deduce urls
   SIGQUIT - Produce a stack dump and exit
   SIGTERM - initiate shutdown
+  SIGINT  - initiate shutdown
   SIGUSR1 - generates an immediate stats report
   SIGUSR2 - toggles --log-queries
 `)

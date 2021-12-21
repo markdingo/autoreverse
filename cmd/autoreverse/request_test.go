@@ -38,7 +38,7 @@ func TestRequestLog(t *testing.T) {
 	req.log()
 
 	got := out.String()
-	exp := "ru=ok q=None/ s= id=0 h=TcZ sz=0/0 C=0/0/0\n"
+	exp := "ru=ok q=None/ s= id=0 h=Tzt sz=0/0 C=0/0/0\n"
 	if exp != got {
 		t.Error("Log wrong. Exp", exp, "Got", got)
 	}

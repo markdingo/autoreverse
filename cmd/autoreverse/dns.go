@@ -14,11 +14,7 @@ import (
 // Called from miekg - handles all DNS queries. All query logic is embedded in this one
 // rather large function.
 func (t *server) ServeDNS(wtr dns.ResponseWriter, query *dns.Msg) {
-	req := &request{query: query, response: new(dns.Msg),
-		src: wtr.RemoteAddr(), network: t.network}
-	if len(t.network) == 0 {
-		t.network = dnsutil.UDPNetwork
-	}
+	req := newRequest(query, wtr.RemoteAddr(), t.network)
 	req.stats.gen.queries++
 
 	if t.cfg.logQueriesFlag {
@@ -38,10 +34,46 @@ func (t *server) ServeDNS(wtr dns.ResponseWriter, query *dns.Msg) {
 		req.logQName = req.qName                       // Can override with compact qName
 	}
 
-	// Extract Opt valies which should always be possible
+	req.opt = req.query.IsEdns0() // Extract Opt values nice and early
 
-	req.nsidRequested = (len(t.cfg.nsid) > 0) && (findNSID(query) != nil)
-	req.clientCookie, req.serverCookie = findCookie(query)
+	if (len(t.cfg.nsid) > 0) && (req.findNSID() != nil) {
+		req.nsidOut = t.cfg.nsidAsHex
+	}
+
+	// We don't really do much with cookies yet apart from exchange them with clients
+	// and note whether they are correct or not. Mostly this is laying the ground-work
+	// so that it's easy to add differentiation later.
+
+	req.findCookies()
+	if req.cookiesPresent {
+		req.stats.gen.cookie++
+		log.Majorf("Cookies: v=%t qc=%d C=(%d) %s S=(%d) %s",
+			req.cookiesValid, len(req.query.Question),
+			len(req.clientCookie), req.clientCookie,
+			len(req.serverCookie), req.serverCookie)
+		if !req.cookiesValid {
+			req.response.SetRcodeFormatError(query)
+			t.writeMsg(wtr, req)
+			req.stats.gen.formatError++
+			req.addNote("Malformed cookie")
+			return
+		}
+		sCookie := genServerCookie(t.cookieSecrets, req.src.String(), req.clientCookie)
+		log.Majorf("sCookie: %s", sCookie)
+		if len(req.serverCookie) > 0 && sCookie != req.serverCookie {
+			req.addNote("Server cookie mismatch")
+			req.stats.gen.wrongCookie++
+		}
+		req.cookieOut = req.clientCookie + sCookie
+	}
+
+	// Is this a cookie-only request?
+	if req.cookiesValid && len(req.query.Question) == 0 {
+		req.response.SetReply(query)
+		t.writeMsg(wtr, req)
+		req.addNote("Cookie-only query")
+		return
+	}
 
 	if len(req.query.Question) != 1 ||
 		len(req.query.Answer) != 0 ||
@@ -50,26 +82,26 @@ func (t *server) ServeDNS(wtr dns.ResponseWriter, query *dns.Msg) {
 		req.response.SetRcodeFormatError(query)
 		t.writeMsg(wtr, req)
 		req.stats.gen.formatError++
-		req.logNote = "Malformed Query"
+		req.addNote("Malformed Query")
 		return
 	}
-
-	req.ptrDB = t.dbGetter.Current()
 
 	// If query contains a UDP size value, use it if it's reasonable
 	if t.network == dnsutil.UDPNetwork {
 		req.maxSize = dnsutil.MaxUDPSize // Default unless over-ridden
-		edns := req.query.IsEdns0()
-		if edns != nil {
-			mz := edns.UDPSize()
+		if req.opt != nil {
+			mz := req.opt.UDPSize()
 			if (mz > 512) && (mz <= dnsutil.MaxUDPSize) { // Reasonable?
 				req.maxSize = mz
 			}
 		}
 	}
 
-	// Pre-processing checks and setup is complete. Time to dispatch on the
-	// query. Order is important which porbe queries first followed by chaos.
+	req.ptrDB = t.dbGetter.Current() // Final setup for request prior to dispatching
+	req.mutables = t.getMutables()   // Get current mutables from server instance
+
+	// Pre-processing checks and setup is complete. The order of dispatching is: probe
+	// queries first followed by chaos followed by regular queries.
 
 	// Probes can be sent multiple times and this function responds possitively each
 	// time. Whether probes are oneshot or multishot process is determined by probe
@@ -82,20 +114,19 @@ func (t *server) ServeDNS(wtr dns.ResponseWriter, query *dns.Msg) {
 	// zone. This is particularly likely when the forward and reverse are serviced by
 	// the same name server - which is expected to be common in the autoreverse case.
 
-	req.mutables = t.getMutables() // Get current mutables from server instance
 	if req.probe != nil {
 		if req.probe.QuestionMatches(req.question) {
 			log.Minor("Valid Probe received from ", req.src)
-			req.logNote = "Probe match"
+			req.addNote("Probe match")
 			req.response.SetReply(req.query)
 			req.response.Answer = append(req.response.Answer, req.probe.Answer())
 			t.writeMsg(wtr, req)
 			return
 		}
-		req.logNote = "Non-probe query during prone"
+		req.addNote("Non-probe query during prone")
 	}
 
-	// Choas helps check reachability thru firewalls, port forwarding and whatnot.
+	// Chaos helps check reachability thru firewalls, port forwarding and whatnot.
 
 	if t.cfg.chaosFlag &&
 		req.question.Qclass == dns.ClassCHAOS &&
@@ -108,12 +139,12 @@ func (t *server) ServeDNS(wtr dns.ResponseWriter, query *dns.Msg) {
 	// All special-case dispatching is complete. All legitimate queries must now be in
 	// one our zones of authority which is only ever in ClassINET. This following test
 	// is one of the reasons why passthru is INET-only. These tests *could* be
-	// rearranged to allow it, but why bother? The focus is more about autoreverse
-	// processing.
+	// rearranged to allow passthru of other classes, but why bother? The focus is
+	// more about autoreverse processing.
 
 	if req.question.Qclass != dns.ClassINET { // Only serve INET henceforth
-		req.logNote = fmt.Sprintf("Wrong class %s",
-			dnsutil.ClassToString(dns.Class(req.question.Qclass)))
+		req.addNote(fmt.Sprintf("Wrong class %s",
+			dnsutil.ClassToString(dns.Class(req.question.Qclass))))
 		t.serveRefused(wtr, req)
 		req.stats.gen.wrongClass++
 		return
@@ -124,7 +155,7 @@ func (t *server) ServeDNS(wtr dns.ResponseWriter, query *dns.Msg) {
 		if len(t.cfg.passthru) > 0 { // Nope - do we passthru?
 			t.passthru(wtr, req)
 		} else {
-			req.logNote = "out of bailiwick"
+			req.addNote("out of bailiwick")
 			t.serveRefused(wtr, req)
 			req.stats.gen.noAuthority++
 		}
@@ -296,9 +327,9 @@ func (t *server) serveAAAA(wtr dns.ResponseWriter, req *request) bool {
 	return true
 }
 
-// Expecting the usual reverse syntax. Return true if we answered the question. Otherwise
+// Expecting the usual reverse syntax. Return true if we answered the question, otherwise
 // let the caller deal with any subsequent processing. The PTR database is consulted first
-// to see if there is deduce PTRs for this qName. If no database entries are found *and*
+// to see if there are deduced PTRs for this qName. If no database entries are found *and*
 // the config allows synthetic responses, generate one.
 func (t *server) servePTR(wtr dns.ResponseWriter, req *request) bool {
 	var (
@@ -333,7 +364,7 @@ func (t *server) servePTR(wtr dns.ResponseWriter, req *request) bool {
 		req.response.SetRcodeFormatError(req.query)
 		t.writeMsg(wtr, req)
 		req.stats.gen.formatError++
-		req.logNote = "bad Mux"
+		req.addNote("bad Mux")
 		return true
 	}
 
@@ -347,9 +378,9 @@ func (t *server) servePTR(wtr dns.ResponseWriter, req *request) bool {
 		if t.cfg.synthesizeFlag { // and config allows synthesis, then make one up!
 			ar = append(ar,
 				dnsutil.SynthesizePTR(req.qName, req.mutables.ptrSuffix, ip))
-			req.logNote = "Synth"
+			req.addNote("Synth")
 		} else {
-			req.logNote = "No Synth"
+			req.addNote("No Synth")
 			t.serveNXDomain(wtr, req)
 			statsp.noSynth++
 			return true
@@ -403,23 +434,9 @@ func (t *server) MatchQNameAndServe(wtr dns.ResponseWriter, req *request, rrs []
 // writeMsg finalized the output message with all of the common processing then calls
 // the response writer to send the message. Any error is recorded in req.logError
 func (t *server) writeMsg(wtr dns.ResponseWriter, req *request) {
-	var opt dns.OPT
-	optSet := false
-	if req.nsidRequested { // Add pre-populated NSID option?
-		opt = t.cfg.nsidOpt // Take a copy as we may override DNS size
-		optSet = true
-		req.response.Extra = append(req.response.Extra, &opt)
-		req.stats.gen.nsid++
-	}
-	if len(req.clientCookie) > 0 {
-		req.stats.gen.cookie++
-	}
-	if req.maxSize > 0 {
-		if optSet {
-			opt.SetUDPSize(req.maxSize)
-		} else {
-			req.response.SetEdns0(req.maxSize, false)
-		}
+	opt := req.genOpt()
+	if opt != nil {
+		req.response.Extra = append(req.response.Extra, opt)
 	}
 
 	req.response.Authoritative = true
@@ -432,41 +449,4 @@ func (t *server) writeMsg(wtr dns.ResponseWriter, req *request) {
 	if err != nil {
 		req.logError = fmt.Errorf("WriteMsg failed: %s", dnsutil.ShortenLookupError(err))
 	}
-}
-
-// Search OPT RRs for an NSID request. OPT is the Matryoshka dolls of Internet protocols.
-// Return the EDNS opt if found, otherwise nil.
-func findNSID(query *dns.Msg) *dns.EDNS0_NSID {
-	opt := query.IsEdns0() // OPT RR?
-	if opt == nil {
-		return nil
-	}
-
-	for _, subopt := range opt.Option {
-		if so, ok := subopt.(*dns.EDNS0_NSID); ok {
-			return so
-		}
-	}
-
-	return nil
-}
-
-// Search OPT RRs for a rfc7873 cookie. Return the client and server cookie if
-// found. Returned empty client string indicate the option wasn't found or was
-// ineffective.
-func findCookie(query *dns.Msg) (client, server string) {
-	opt := query.IsEdns0() // OPT RR?
-	if opt == nil {
-		return
-	}
-
-	for _, subopt := range opt.Option {
-		if so, ok := subopt.(*dns.EDNS0_COOKIE); ok {
-			client = so.Cookie[:16]
-			server = so.Cookie[16:]
-			return
-		}
-	}
-
-	return
 }

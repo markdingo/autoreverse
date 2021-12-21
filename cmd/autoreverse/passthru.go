@@ -19,7 +19,7 @@ import (
 // probably be worth holding on to a socket across passthru requests. That will require
 // an extension to the resolver interface.
 func (t *server) passthru(wtr dns.ResponseWriter, req *request) {
-	req.logNote = "passthru"
+	req.addNote("passthru")
 	req.stats.gen.passthruOut++
 	response, _, err := t.resolver.SingleExchange(context.Background(),
 		resolver.NewExchangeConfig(), req.query, t.cfg.passthru, "")

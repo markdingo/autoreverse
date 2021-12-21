@@ -29,9 +29,12 @@ type generalStats struct {
 	queries int // Total queries
 
 	formatError int // Pre-Authority counters
-	chaos       int
-	nsid        int
-	cookie      int
+
+	chaos  int // EDNS sub-opts
+	nsid   int
+	cookie int
+
+	wrongCookie int // Server cookie mismatch
 	wrongClass  int
 	noAuthority int
 
@@ -54,6 +57,7 @@ func (t *generalStats) add(from *generalStats) {
 	t.chaos += from.chaos
 	t.nsid += from.nsid
 	t.cookie += from.cookie
+	t.wrongCookie += from.wrongCookie
 	t.wrongClass += from.wrongClass
 	t.noAuthority += from.noAuthority
 	t.authZoneANY += from.authZoneANY
@@ -68,8 +72,9 @@ func (t *generalStats) add(from *generalStats) {
 }
 
 func (t *generalStats) String() string {
-	return fmt.Sprintf("q=%d fe=%d ch=%d nsid=%d cookie=%d wc=%d noaz=%d az=%d/%d/%d/%d/%d nx=%d pass=%d/%d",
-		t.queries, t.formatError, t.chaos, t.nsid, t.cookie, t.wrongClass, t.noAuthority,
+	return fmt.Sprintf("q=%d fe=%d ch=%d nsid=%d cookie=%d/%d wc=%d noaz=%d az=%d/%d/%d/%d/%d nx=%d pass=%d/%d",
+		t.queries, t.formatError, t.chaos, t.nsid, t.cookie, t.wrongCookie,
+		t.wrongClass, t.noAuthority,
 		t.authZoneANY, t.authZoneSOA, t.authZoneNS, t.authZoneA, t.authZoneAAAA,
 		t.nxDomain, t.passthruOut, t.passthruIn)
 }

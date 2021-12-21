@@ -111,7 +111,7 @@ func testFindOne(t *testing.T, ix int, tc tfapCase) {
 			t.Log(out.String())
 			out.Reset()
 		} else if tc.parent != R.Parent.Domain {
-			t.Error(ix, tc.name, "Parent mis-match. Want",
+			t.Error(ix, tc.name, "Parent mismatch. Want",
 				tc.parent, "got", R.Parent.Domain)
 			t.Log(out.String())
 			out.Reset()

@@ -57,6 +57,8 @@ type server struct {
 
 	statsMu sync.RWMutex
 	stats   serverStats
+
+	cookieSecrets [2]uint64
 }
 
 func newServer(cfg *config, dbGetter *database.Getter, r resolver.Resolver, network, address string) *server {

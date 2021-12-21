@@ -50,7 +50,7 @@ func (t *autoReverse) Run() {
 
 		case signal = <-t.sig:
 			switch {
-			case osutil.IsSignalTERM(signal):
+			case osutil.IsSignalTERM(signal), osutil.IsSignalINT(signal):
 				stopFlag = true
 
 			case osutil.IsSignalUSR1(signal): // USR1 produces a status report

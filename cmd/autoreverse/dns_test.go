@@ -113,7 +113,7 @@ func TestProbe(t *testing.T) {
 	}
 
 	// Check logging output
-	exp := `ru=REFUSED q=MX/example.org. s=127.0.0.2 id=2 h=U sz=40/1232 C=0/0/1 out of bailiwick
+	exp := `ru=REFUSED q=MX/example.org. s=127.0.0.2 id=2 h=U sz=40/1232 C=0/0/1 Non-probe query during prone:out of bailiwick
   Valid Probe received from 127.0.0.2
 ru=ok q=AAAA/cubyh.fozzy.example.net. s=127.0.0.2 id=1 h=U sz=103/1232 C=1/0/1 Probe match
 `
@@ -224,7 +224,7 @@ ru=NXDOMAIN q=PTR/fd2d:ffff::1 s=127.0.0.2 id=1 h=U sz=134/1232 C=0/1/1 No Synth
 	}
 }
 
-// NSID, Cookie, UDPsize and any corner cases that come to mind
+// NSID, UDPsize and any other corner cases that come to mind
 func TestMisc(t *testing.T) {
 	testCases := []struct {
 		qType uint16
@@ -256,25 +256,14 @@ func TestMisc(t *testing.T) {
 	server.setMutables("", nil, auths)
 
 	query := setQuestion(dns.ClassCHAOS, dns.TypeTXT, "version.bind.")
+
 	o := new(dns.OPT)
 	o.Hdr.Name = "."
 	o.Hdr.Rrtype = dns.TypeOPT
 	e1 := new(dns.EDNS0_NSID)
 	e1.Code = dns.EDNS0NSID
-	e2 := new(dns.EDNS0_COOKIE)
-	e2.Code = dns.EDNS0COOKIE
-	e2.Cookie = "0123456789abcdeffedcba9876543210"
 	o.Option = append(o.Option, e1)
-	o.Option = append(o.Option, e2)
 	query.Extra = append(query.Extra, o)
-
-	c, s := findCookie(query)
-	if c != "0123456789abcdef" {
-		t.Error("findCookie found client", c)
-	}
-	if s != "fedcba9876543210" {
-		t.Error("findCookie found server", s)
-	}
 
 	server.ServeDNS(wtr, query)
 	resp := wtr.Get()
@@ -283,13 +272,6 @@ func TestMisc(t *testing.T) {
 	}
 	if resp.Rcode != dns.RcodeSuccess {
 		t.Error("Expected RcodeSuccess, not", dnsutil.RcodeToString(resp.Rcode))
-	}
-
-	nso := findNSID(resp)
-	if nso == nil {
-		t.Error("Expected NSID option")
-	} else if nso.Nsid != nsidAsHex {
-		t.Error("Expected 'Jammin' in nsid, not", nso.Nsid)
 	}
 
 	// Check UDP Size settings to see that only sensible values are accepted
@@ -339,7 +321,7 @@ func TestMisc(t *testing.T) {
 	}
 
 	// Check logging
-	exp := `ru=ok q=TXT/version.bind. s=127.0.0.2 id=1 h=UCSn sz=87/1232 C=1/0/1
+	exp := `ru=ok q=TXT/version.bind. s=127.0.0.2 id=1 h=Un sz=87/1232 C=1/0/1
 ru=ok q=TXT/version.bind. s=127.0.0.2 id=1 h=U sz=77/1232 C=1/0/1
 ru=ok q=TXT/version.bind. s=127.0.0.2 id=1 h=U sz=77/600 C=1/0/1
 ru=ok q=TXT/version.bind. s=127.0.0.2 id=1 h=U sz=77/1231 C=1/0/1

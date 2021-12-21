@@ -604,6 +604,7 @@ responds to the following signals:
 .Bl -column -offset indent ".Sy Signal" ".Sy Description"
 .It Li SIGHUP Ta Reload all zones specified with Fl -PTR-deduce
 .It Li SIGQUIT Ta Produce a stack dump and exit
+.It Li SIGINT Ta Initiate shutdown
 .It Li SIGTERM Ta Initiate shutdown
 .It SIGUSR1 Ta Generates an immediate statistics report
 .It SIGUSR2 Ta Toggles Fl -log-queries
@@ -879,25 +880,6 @@ comes in handy.
 .Nm
 has no clue about
 .Sy DNSSEC .
-.Pp
-.Nm
-has no clue about
-.Sy DNS Cookies [RFC7873]
-and Mr DNS suggests that that makes
-.Nm
-an
-.Ql outdated platform .
-To offer some appeasement, the periodic statistics report includes counts of queries with
-a
-.Sy DNS Cookie
-option to see just how much traction they really have.
-Look for the
-.Ql cookie=n
-on the
-.Ql Stats: Total
-line. If Mr DNS proves right, as he invariably does, then we'll add cookie
-support. Please report back to the project if you get significant queries with cookies -
-or not.
 .Pp
 As always, any bugs or feedback should be directed to the project page at
 https://github.com/markdingo/autoreverse

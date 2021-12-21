@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/rand"
 	"net"
 	"os"
 	"sync"
@@ -31,9 +32,8 @@ type autoReverse struct {
 	wg      sync.WaitGroup // For all servers started
 	servers []*server
 
-	startTime time.Time
-	statsTime time.Time // Last time stats were reset
-
+	startTime        time.Time
+	statsTime        time.Time             // Last time stats were reset
 	forward          string                // Canonical forward domain name
 	forwardAuthority *delegation.Authority // Could be either delegated or local
 
@@ -80,12 +80,31 @@ func (t *autoReverse) addAuthority(add *delegation.Authority) bool {
 	return true
 }
 
+var cookieSecrets [2]uint64
+
+func init() {
+	b := make([]byte, 16) // Effectively two uint64s
+	rand.Read(b)          // as needed by siphash-2-4
+	for ix := 0; ix < 16; ix = ix + 2 {
+		cookieSecrets[0] <<= 8
+		cookieSecrets[1] <<= 8
+		cookieSecrets[0] |= uint64(b[ix])
+		cookieSecrets[1] |= uint64(b[ix+1])
+	}
+}
+
 // Open Listen sockets and start servers. Does not return until all servers have started
 // or an error is detected.
+//
+// The server secret for cookie generation is set here. Note that strictly the secret
+// should be configurable so that anycast DNS servers can all generate the same cookie,
+// but it's extremely unlikely that autoreverse will be used in that scenario, so for now,
+// we just use a cryptographically strong random value.
 func (t *autoReverse) startServers() {
 	for _, network := range []string{dnsutil.UDPNetwork, dnsutil.TCPNetwork} {
 		for _, addr := range t.cfg.listen {
 			srv := newServer(t.cfg, t.dbGetter, t.resolver, network, addr)
+			srv.cookieSecrets = cookieSecrets // All servers get the same secret
 			err := t.startServer(srv)
 			if err != nil {
 				fatal(err)
@@ -127,10 +146,10 @@ func (t *autoReverse) synthesizeSOA(auth *delegation.Authority, mboxDomain strin
 	auth.SOA.Hdr.Class = dns.ClassINET
 	auth.SOA.Hdr.Rrtype = dns.TypeSOA
 	auth.SOA.Hdr.Ttl = t.cfg.TTLAsSecs
-	if len(auth.NS) > 0 { // Zero is possible if probes failures are ignored
+	if len(auth.NS) > 0 { // Zero is possible for locals
 		auth.SOA.Ns = auth.NS[0].(*dns.NS).Ns
 	} else {
-		auth.SOA.Ns = programName + auth.Domain
+		auth.SOA.Ns = auth.Domain
 	}
 
 	auth.SOA.Mbox = "hostmaster." + mboxDomain // Why not?
