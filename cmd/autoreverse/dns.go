@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/hex"
 	"fmt"
 	"net"
 	"strings"
@@ -47,34 +48,36 @@ func (t *server) ServeDNS(wtr dns.ResponseWriter, query *dns.Msg) {
 	req.findCookies()
 	if req.cookiesPresent {
 		req.stats.gen.cookie++
-		log.Majorf("Cookies: v=%t qc=%d C=(%d) %s S=(%d) %s",
-			req.cookiesValid, len(req.query.Question),
-			len(req.clientCookie), req.clientCookie,
-			len(req.serverCookie), req.serverCookie)
-		if !req.cookiesValid {
+		if !req.cookieWellFormed { // This means the OPT is malformed
 			req.response.SetRcodeFormatError(query)
 			t.writeMsg(wtr, req)
 			req.stats.gen.formatError++
 			req.addNote("Malformed cookie")
 			return
 		}
-		sCookie := genServerCookie(t.cookieSecrets, req.src.String(), req.clientCookie)
-		log.Majorf("sCookie: %s", sCookie)
-		if len(req.serverCookie) > 0 && sCookie != req.serverCookie {
-			req.addNote("Server cookie mismatch")
-			req.stats.gen.wrongCookie++
+		if !req.validateOrGenerateCookie(t.cookieSecrets) {
+			if len(req.serverCookie) > 0 {
+				req.addNote("Server cookie mismatch")
+				req.stats.gen.wrongCookie++
+			}
 		}
-		req.cookieOut = req.clientCookie + sCookie
+		req.stats.gen.cookie++
+		log.Majorf("Cookies: qo=%t C=(%d) %s S=(%d) %s out=%s",
+			len(req.query.Question) == 0,
+			len(req.clientCookie), hex.EncodeToString(req.clientCookie),
+			len(req.serverCookie), hex.EncodeToString(req.serverCookie),
+			hex.EncodeToString(req.cookieOut))
 	}
 
 	// Is this a cookie-only request?
-	if req.cookiesValid && len(req.query.Question) == 0 {
+	if len(req.clientCookie) > 0 && len(req.serverCookie) == 0 && len(req.query.Question) == 0 {
 		req.response.SetReply(query)
 		t.writeMsg(wtr, req)
 		req.addNote("Cookie-only query")
 		return
 	}
 
+	// After the weird cookie-request, we now only accept "normal" queries
 	if len(req.query.Question) != 1 ||
 		len(req.query.Answer) != 0 ||
 		len(req.query.Ns) != 0 ||

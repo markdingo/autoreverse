@@ -1,7 +1,10 @@
 package main
 
 import (
+	"bytes"
+	"encoding/binary"
 	"encoding/hex"
+	"fmt"
 	"net"
 	"time"
 
@@ -10,9 +13,10 @@ import (
 )
 
 const (
-	cCookieLength    = 8 * 2  // Cookie lengths and limits in terms of hex strings
-	sCookieMinLength = 8 * 2  // as miekg presents and expects cookies that way.
-	sCookieMaxLength = 32 * 2 // This has structure as of rfc9018
+	cCookieLength    = 8 // Client cookie is always exactly this long
+	sCookieMinLength = 8 // If present, a server cookie must be in this range
+	sCookieMaxLength = 32
+	sCookieV1Length  = 16 // A version '1' cookie is exactly 128 bits
 )
 
 // findNSID searches the OPT RR for an NSID request. OPT is the Matryoshka dolls of
@@ -26,6 +30,44 @@ func (t *request) findNSID() *dns.EDNS0_NSID {
 		if so, ok := subopt.(*dns.EDNS0_NSID); ok {
 			return so
 		}
+	}
+
+	return nil
+}
+
+// genOpt creates an OPT RR with all the required sub-opt values. Return the populated
+// *dns.OPT if there is at least one sub-opt value, otherwise return nil.
+func (t *request) genOpt() *dns.OPT {
+	var returnOpt bool
+
+	opt := new(dns.OPT) // Presume we'll need it so take the construction hit
+	opt.Hdr.Name = "."
+	opt.Hdr.Rrtype = dns.TypeOPT
+	opt.Hdr.Ttl = 0 // extended RCODE and flags
+
+	if t.maxSize > 0 {
+		returnOpt = true
+		opt.SetUDPSize(t.maxSize)
+	}
+
+	if len(t.nsidOut) > 0 {
+		returnOpt = true
+		e := new(dns.EDNS0_NSID)
+		e.Code = dns.EDNS0NSID
+		e.Nsid = t.nsidOut
+		opt.Option = append(opt.Option, e)
+	}
+
+	if len(t.cookieOut) > 0 {
+		returnOpt = true
+		e := new(dns.EDNS0_COOKIE)
+		e.Code = dns.EDNS0COOKIE
+		e.Cookie = hex.EncodeToString(t.cookieOut) // Miekg wants it in hex
+		opt.Option = append(opt.Option, e)
+	}
+
+	if returnOpt {
+		return opt
 	}
 
 	return nil
@@ -57,65 +99,69 @@ func (t *request) findCookies() {
 		return
 	}
 
-	if len(so.Cookie) < cCookieLength { // If present, must be exactly 8 bytes - 16 hex
-		t.clientCookie = so.Cookie // Provide potential logging material
+	if len(so.Cookie) < (2 * cCookieLength) { // If present, cannot be less than 8 bytes - 16 hex
+		t.clientCookie, _ = hex.DecodeString(so.Cookie) // Potential logging material
 		return
 	}
 
-	t.clientCookie = so.Cookie[:cCookieLength]
-	t.serverCookie = so.Cookie[cCookieLength:]
+	// Treat cookies as a binary set of bytes internally, even tho miekg stores them
+	// in hex format. We don't bother checking the hex decode as a) it should never
+	// occur and b) the failure mode is exactly what we'd do any way.
+	t.clientCookie, _ = hex.DecodeString(so.Cookie[:cCookieLength*2])
+	t.serverCookie, _ = hex.DecodeString(so.Cookie[cCookieLength*2:])
 
-	if len(t.serverCookie) == 0 {
-		t.cookiesValid = true
-	} else if len(t.serverCookie) >= 16 && len(t.serverCookie) <= 64 {
-		t.cookiesValid = true
+	t.cookieWellFormed = len(t.serverCookie) == 0 ||
+		(len(t.serverCookie) >= sCookieMinLength &&
+			len(t.serverCookie) <= sCookieMaxLength)
+
+	return
+}
+
+// validateOrGenerateCookie compares the client supplied server cookie with the one we
+// expect it to have. This is a little tricker than a binary comparison due to the use of
+// a slowly ticking timestamp in the cookie hash. This function also sets the server
+// cookie to be returned to the client, which again may differ if the timestamp has ticked
+// over since we last sent this client a cookie.
+//
+// In terms of trusting the client we only consider a server cookie if it's version '1',
+// exactly 16 bytes long and contains a timestamp which is current or one tick behind.
+//
+// Returns true if the server cookie is valid. Regardless of validity, cookieOut is set
+// with the full cookie to send back to the client.
+func (t *request) validateOrGenerateCookie(secrets [2]uint64) (valid bool) {
+	now := time.Now().Unix()             // Generate the current timestamp
+	ourClock := uint32(now & 0xFFFFF000) // 0xFFF seconds = 1.14 hours
+	if ourClock == 0 {
+		ourClock = 0x00001000 // Avoid RFC1982 contortions
+	}
+	fmt.Println("Ticks left", 0x1000 - (now & 0xFFF))
+	var theirClock uint32                        // Zero ensures a cookie regen below
+	if len(t.serverCookie) == sCookieV1Length && // If it's a valid v1 cookie
+		t.serverCookie[0] == 1 &&
+		t.serverCookie[1] == 0 &&
+		t.serverCookie[2] == 0 &&
+		t.serverCookie[3] == 0 {
+		theirClock = binary.BigEndian.Uint32(t.serverCookie[4:8])
+		if theirClock == ourClock || theirClock == (ourClock-1) {
+			t.cookieOut = genV1Cookie(secrets, theirClock, t.src.String(),
+				t.clientCookie)
+			valid = bytes.Compare(t.serverCookie[:16], t.cookieOut[8:24]) == 0
+		}
+	}
+
+	if theirClock != ourClock { // If clocks differ then t.cookieOut is old or not present
+		t.cookieOut = genV1Cookie(secrets, ourClock, t.src.String(), t.clientCookie)
 	}
 
 	return
 }
 
-// genOpt creates an OPT RR with all the required sub-opt values. Return the populated
-// *dns.OPT if there is at least one sub-opt value, otherwise return nil.
-func (t *request) genOpt() *dns.OPT {
-	var returnOpt bool
-
-	opt := new(dns.OPT) // Presume we'll need it so take the construction hit
-	opt.Hdr.Name = "."
-	opt.Hdr.Rrtype = dns.TypeOPT
-	opt.Hdr.Ttl = 0 // extended RCODE and flags
-
-	if t.maxSize > 0 {
-		returnOpt = true
-		opt.SetUDPSize(t.maxSize)
-	}
-
-	if len(t.nsidOut) > 0 {
-		returnOpt = true
-		e := new(dns.EDNS0_NSID)
-		e.Code = dns.EDNS0NSID
-		e.Nsid = t.nsidOut
-		opt.Option = append(opt.Option, e)
-	}
-
-	if len(t.cookieOut) > 0 {
-		returnOpt = true
-		e := new(dns.EDNS0_COOKIE)
-		e.Code = dns.EDNS0COOKIE
-		e.Cookie = t.cookieOut
-	}
-
-	if returnOpt {
-		return opt
-	}
-
-	return nil
-}
-
-// genServerCookie generates the server cookie. Originally the cookie was just an
-// arbitrary array of bytes, but as of rfc9018, a 128 bit server cookie has
-// structure. This function always generates an rfc9018 128 bit server cookie as:
+// genV1Cookie generates a (version '1') full cookie to return to the client, including
+// the 8-byte client cookie as the prefix.
 //
-// [0:1] Version - current 0x1
+// A version '1' server cookie is of the form:
+//
+// [0:1] Version - currently 0x1
 // [1:4] Reserved - must be 0x0
 // [4:8] Timestamp - serial number arithmetic unsigned unix time
 // [8:16] Hash
@@ -125,45 +171,37 @@ func (t *request) genOpt() *dns.OPT {
 // The input into [SipHash-2-4]) MUST be either precisely 20 bytes in case of an IPv4
 // Client-IP or precisely 32 bytes in case of an IPv6 Client-IP.
 //
-// Returned as a hex string, thus 32 bytes long.
-func genServerCookie(secrets [2]uint64, clientIP, clientCookieHex string) string {
+// Returned full cookie string that is ultimately return to the client
+func genV1Cookie(secrets [2]uint64, clock uint32, clientIP string, clientCookie []byte) []byte {
 	h, _, _ := net.SplitHostPort(clientIP)
-	ip := net.ParseIP(h)                     // Convert everything back to binary
-	cCookie, _ := hex.DecodeString(clientCookieHex) // byte slices
-
-	// Construct the first part of the server cookie as that's input to the hash
-	sCookie := make([]byte, 16)
-	sCookie[0] = 1
-	now := time.Now().Unix()
-	var now32 uint32
-	now32 = uint32(now & 0xFFFFF000) // now32 rolls every 1.14 hours
-	sCookie[4] = byte(now32 >> 24)
-	sCookie[5] = byte(now32 & 0x00FF0000 >> 16)
-	sCookie[6] = byte(now32 & 0x0000FF00 >> 8)
-	sCookie[7] = byte(now32 & 0x000000FF)
+	ip := net.ParseIP(h) // Convert everything back to binary
 
 	// Hash = ( Client Cookie | Version | Reserved | Timestamp | Client-IP, Server Secret )
 	//
-	// hashInput should end up being either 20 or 32 bytes long for ipv4 and ipv6
-	//respectively.
+	// The server cookie is partially constructed with the client-IP in the hash position
+	// (and beyond) for the purposes of calculating the hash, then the first 4 bytes of the
+	// Client-IP are overwritten with the calculated hash.
 
-	hashInput := cCookie                          // Client Cookie
-	hashInput = append(hashInput, sCookie[:8]...) // Version | Reserved | Timestamp
+	cookie := make([]byte, 8+32)   // Largest size possible
+	copy(cookie, clientCookie[:8]) // findCookies assures us that this is exactly 8 bytes long
+	cookie[8] = 1                  // Version 1
+	binary.BigEndian.PutUint32(cookie[12:16], clock)
+
+	ix := 16 // Start location of hash/IP
 	if ipv4 := ip.To4(); ipv4 != nil {
-		hashInput = append(hashInput, ipv4[:4]...) // Client-IP
+		copy(cookie[ix:ix+4], ipv4[:4])
+		ix += 4
 	} else {
 		ipv6 := ip.To16()
-		hashInput = append(hashInput, ipv6[:16]...) // Client-IP
+		copy(cookie[ix:ix+16], ipv6[:16])
+		ix += 16
 	}
 
-	sum64 := siphash.Hash(secrets[0], secrets[1], hashInput)
+	sum64 := siphash.Hash(secrets[0], secrets[1], cookie[:ix])
 
-	// Complete construction of the server cookie
+	// Stash hash on top of the first part of Client-IP
 
-	for ix := 8; ix < 16; ix++ {
-		sCookie[ix] = byte(sum64 & 0xFF)
-		sum64 >>= 8
-	}
+	binary.BigEndian.PutUint64(cookie[16:24], sum64)
 
-	return hex.EncodeToString(sCookie)
+	return cookie[:24] // 8 Client cookie + 16 Server cookie = 24 total
 }

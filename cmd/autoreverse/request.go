@@ -28,13 +28,13 @@ type request struct {
 	qName    string
 	opt      *dns.OPT // Optionally present
 
-	cookiesPresent bool   // Cookie sub-option is present in opt
-	cookiesValid   bool   // Lengths are valid - only ever set if cookiesPresent is true
-	clientCookie   string // Copied from OPT regardless of cookiesValid
-	serverCookie   string // Ditto
+	cookiesPresent   bool   // Cookie sub-option is present in opt
+	cookieWellFormed bool   // Lengths are valid - only ever set if cookiesPresent is true
+	clientCookie     []byte // Copied and hex decoded from OPT regardless of cookieWellFormed
+	serverCookie     []byte // Ditto
 
 	nsidOut   string // Output nsid if len > 0
-	cookieOut string // If len > 0, the entire cookie hex to add to the out-going OPT
+	cookieOut []byte // If len > 0, this is the entire cookie to add to the out-going OPT
 
 	mutables // Copied from server under mutex protection
 
@@ -111,7 +111,7 @@ func (t *request) log() {
 	if t.cookiesPresent {
 		hFlags = append(hFlags, 'e')
 	}
-	if t.cookiesValid {
+	if t.cookieWellFormed {
 		hFlags = append(hFlags, 'E')
 	}
 	if len(t.serverCookie) > 0 {
