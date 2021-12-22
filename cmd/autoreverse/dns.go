@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/hex"
 	"fmt"
+	"time"
 	"net"
 	"strings"
 
@@ -55,7 +56,7 @@ func (t *server) ServeDNS(wtr dns.ResponseWriter, query *dns.Msg) {
 			req.addNote("Malformed cookie")
 			return
 		}
-		if !req.validateOrGenerateCookie(t.cookieSecrets) {
+		if !req.validateOrGenerateCookie(t.cookieSecrets, time.Now().Unix()) {
 			if len(req.serverCookie) > 0 {
 				req.addNote("Server cookie mismatch")
 				req.stats.gen.wrongCookie++
@@ -140,10 +141,10 @@ func (t *server) ServeDNS(wtr dns.ResponseWriter, query *dns.Msg) {
 	}
 
 	// All special-case dispatching is complete. All legitimate queries must now be in
-	// one our zones of authority which is only ever in ClassINET. This following test
-	// is one of the reasons why passthru is INET-only. These tests *could* be
-	// rearranged to allow passthru of other classes, but why bother? The focus is
-	// more about autoreverse processing.
+	// a zone of authority which is only ever in ClassINET. This following test is one
+	// of the reasons why passthru is INET-only. These tests *could* be rearranged to
+	// allow passthru of other classes, but why bother? The focus is more about
+	// autoreverse processing.
 
 	if req.question.Qclass != dns.ClassINET { // Only serve INET henceforth
 		req.addNote(fmt.Sprintf("Wrong class %s",
@@ -227,7 +228,6 @@ func (t *server) ServeDNS(wtr dns.ResponseWriter, query *dns.Msg) {
 	t.serveNXDomain(wtr, req)
 }
 
-// Should this be RcodeserverFailure rather than Refused?
 func (t *server) serveRefused(wtr dns.ResponseWriter, req *request) {
 	req.response.SetRcode(req.query, dns.RcodeRefused)
 	t.writeMsg(wtr, req)
@@ -245,8 +245,8 @@ func (t *server) serveNXDomain(wtr dns.ResponseWriter, req *request) {
 // converted into 192--1.
 //
 // We are expecting just synthetic names but mdns programs tend to generate a bunch of
-// oddball queries such as lb._dns-sd._udp.128.2.0.192.in-addr.arpa which is in-bailiwick
-// if we don't get a match that we can serve, let the caller deal with.
+// oddball queries such as lb._dns-sd._udp.128.2.0.192.in-addr.arpa which are
+// in-bailiwick, but if we don't get a match that we can serve, let the caller deal with.
 //
 // Return true if the query was answered.
 func (t *server) serveA(wtr dns.ResponseWriter, req *request) bool {

@@ -4,9 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/hex"
-	"fmt"
 	"net"
-	"time"
 
 	"github.com/dchest/siphash"
 	"github.com/miekg/dns"
@@ -105,8 +103,8 @@ func (t *request) findCookies() {
 	}
 
 	// Treat cookies as a binary set of bytes internally, even tho miekg stores them
-	// in hex format. We don't bother checking the hex decode as a) it should never
-	// occur and b) the failure mode is exactly what we'd do any way.
+	// in hex format. We don't bother checking the hex decode error return as a) it
+	// should never occur and b) the failure mode is exactly what we'd do any way.
 	t.clientCookie, _ = hex.DecodeString(so.Cookie[:cCookieLength*2])
 	t.serverCookie, _ = hex.DecodeString(so.Cookie[cCookieLength*2:])
 
@@ -128,13 +126,19 @@ func (t *request) findCookies() {
 //
 // Returns true if the server cookie is valid. Regardless of validity, cookieOut is set
 // with the full cookie to send back to the client.
-func (t *request) validateOrGenerateCookie(secrets [2]uint64) (valid bool) {
-	now := time.Now().Unix()             // Generate the current timestamp
-	ourClock := uint32(now & 0xFFFFF000) // 0xFFF seconds = 1.14 hours
+
+const (
+	moduloMask   = 0xFFFFF000 // 0xFFF seconds ~= 1.14 hours
+	clockTick    = 0x1000     // How much the cookie clock increments each tick
+	minimumClock = clockTick  // We only ever allow going back one tick
+)
+
+func (t *request) validateOrGenerateCookie(secrets [2]uint64, unixTime int64) (valid bool) {
+	ourClock := uint32(unixTime & moduloMask)
 	if ourClock == 0 {
-		ourClock = 0x00001000 // Avoid RFC1982 contortions
+		ourClock = minimumClock // Avoid RFC1982 contortions
 	}
-	fmt.Println("Ticks left", 0x1000 - (now & 0xFFF))
+
 	var theirClock uint32                        // Zero ensures a cookie regen below
 	if len(t.serverCookie) == sCookieV1Length && // If it's a valid v1 cookie
 		t.serverCookie[0] == 1 &&
@@ -142,7 +146,7 @@ func (t *request) validateOrGenerateCookie(secrets [2]uint64) (valid bool) {
 		t.serverCookie[2] == 0 &&
 		t.serverCookie[3] == 0 {
 		theirClock = binary.BigEndian.Uint32(t.serverCookie[4:8])
-		if theirClock == ourClock || theirClock == (ourClock-1) {
+		if theirClock == ourClock || theirClock == (ourClock-clockTick) {
 			t.cookieOut = genV1Cookie(secrets, theirClock, t.src.String(),
 				t.clientCookie)
 			valid = bytes.Compare(t.serverCookie[:16], t.cookieOut[8:24]) == 0
