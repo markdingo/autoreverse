@@ -6,19 +6,17 @@ import (
 	"github.com/markdingo/autoreverse/pregen"
 )
 
-// Called if Qclass = CHAOS. Nothing else has been checked yet
+var commonResponse = programName + " " + pregen.Version + " " + pregen.ReleaseDate
+
+// Called if Qclass = CHAOS and Qtype = TXT. It seems silly to be parsimonious with each
+// query name. Given there is no defined syntax and each auth server seems to do something
+// differeny, why not just blat all the details out?
 func (t *server) serveCHAOS(wtr dns.ResponseWriter, req *request) {
-	var response string
+        var response string
 	switch req.qName {
-	case "version.bind.":
-		response = programName
-	case "version.server.":
-		response = pregen.Version + " " + pregen.ReleaseDate
-	case "authors.bind.":
-		response = t.cfg.projectURL
-	case "hostname.bind.":
-		response = t.cfg.nsid
-	case "id.server.":
+	case "version.bind.", "version.server.", "authors.bind.":
+	response = commonResponse + " " + t.cfg.projectURL
+	case "hostname.bind.", "id.server.":
 		response = t.cfg.nsid
 	default:
 		t.serveRefused(wtr, req)
