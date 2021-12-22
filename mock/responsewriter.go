@@ -6,21 +6,9 @@ import (
 	"github.com/miekg/dns"
 )
 
-type addr struct {
-	s string
-}
-
-func (t *addr) Network() string {
-	return "udp"
-}
-
-func (t *addr) String() string {
-	return t.s
-}
-
 var (
-	local  = &addr{s: "127.0.0.1"}
-	remote = &addr{s: "127.0.0.2"}
+	local  = NewNetAddr("udp", "127.0.0.1")
+	remote = NewNetAddr("udp", "127.0.0.2")
 )
 
 // ResponseWriter is a mock replacement for the miekg dns.ResponseWriter. It's used for
