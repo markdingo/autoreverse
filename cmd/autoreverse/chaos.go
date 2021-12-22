@@ -6,16 +6,16 @@ import (
 	"github.com/markdingo/autoreverse/pregen"
 )
 
-var commonResponse = programName + " " + pregen.Version + " " + pregen.ReleaseDate
+var commonCHAOSPrefix = programName + " " + pregen.Version + " " + pregen.ReleaseDate
 
 // Called if Qclass = CHAOS and Qtype = TXT. It seems silly to be parsimonious with each
 // query name. Given there is no defined syntax and each auth server seems to do something
-// differeny, why not just blat all the details out?
+// different, why not just blat all the details out in all cases?
 func (t *server) serveCHAOS(wtr dns.ResponseWriter, req *request) {
-        var response string
+	var response string
 	switch req.qName {
 	case "version.bind.", "version.server.", "authors.bind.":
-	response = commonResponse + " " + t.cfg.projectURL
+		response = commonCHAOSPrefix + " " + t.cfg.projectURL
 	case "hostname.bind.", "id.server.":
 		response = t.cfg.nsid
 	default:

@@ -7,17 +7,18 @@ import (
 	"github.com/markdingo/autoreverse/dnsutil"
 	"github.com/markdingo/autoreverse/log"
 	"github.com/markdingo/autoreverse/mock"
-	"github.com/markdingo/autoreverse/pregen"
 	"github.com/markdingo/autoreverse/resolver"
 
 	"github.com/miekg/dns"
 )
 
 func TestChaos(t *testing.T) {
+	cfg := &config{logQueriesFlag: true, projectURL: "projectURL", nsid: "nsid1"}
+	montyResponse := commonCHAOSPrefix + " " + cfg.projectURL
 	testCases := []struct{ in, out string }{
-		{"version.bind.", programName},
-		{"version.server.", pregen.Version + " " + pregen.ReleaseDate},
-		{"authors.bind.", "projectURL"},
+		{"version.bind.", montyResponse},
+		{"version.server.", montyResponse},
+		{"authors.bind.", montyResponse},
 		{"hostname.bind.", "nsid1"},
 		{"id.server.", "nsid1"},
 		{"nope", ""},
@@ -30,7 +31,6 @@ func TestChaos(t *testing.T) {
 	wtr := &mock.ResponseWriter{}
 
 	res := resolver.NewResolver()
-	cfg := &config{logQueriesFlag: true}
 	server := newServer(cfg, database.NewGetter(), res, "", "")
 
 	// First try with an invalid type
@@ -76,8 +76,6 @@ func TestChaos(t *testing.T) {
 
 	out.Reset()
 	cfg.chaosFlag = true
-	cfg.projectURL = "projectURL"
-	cfg.nsid = "nsid1"
 
 	for ix, tc := range testCases {
 		query = setQuestion(dns.ClassCHAOS, dns.TypeTXT, tc.in)
@@ -115,9 +113,9 @@ func TestChaos(t *testing.T) {
 	}
 
 	// Check logging to confirm responses - good enough
-	exp = `ru=ok q=TXT/version.bind. s=127.0.0.2 id=3 h=U sz=77/1232 C=1/0/1
-ru=ok q=TXT/version.server. s=127.0.0.2 id=4 h=U sz=87/1232 C=1/0/1
-ru=ok q=TXT/authors.bind. s=127.0.0.2 id=5 h=U sz=76/1232 C=1/0/1
+	exp = `ru=ok q=TXT/version.bind. s=127.0.0.2 id=3 h=U sz=106/1232 C=1/0/1
+ru=ok q=TXT/version.server. s=127.0.0.2 id=4 h=U sz=110/1232 C=1/0/1
+ru=ok q=TXT/authors.bind. s=127.0.0.2 id=5 h=U sz=106/1232 C=1/0/1
 ru=ok q=TXT/hostname.bind. s=127.0.0.2 id=6 h=U sz=73/1232 C=1/0/1
 ru=ok q=TXT/id.server. s=127.0.0.2 id=7 h=U sz=65/1232 C=1/0/1
 ru=REFUSED q=TXT/nope. s=127.0.0.2 id=8 h=U sz=33/1232 C=0/0/1
