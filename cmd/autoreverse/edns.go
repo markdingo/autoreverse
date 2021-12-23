@@ -115,6 +115,12 @@ func (t *request) findCookies() {
 	return
 }
 
+const (
+	moduloMask   = 0xFFFFF000 // 0xFFF seconds ~= 1.14 hours
+	clockTick    = 0x1000     // How much the cookie clock increments each tick
+	minimumClock = clockTick  // We only ever allow going back one tick
+)
+
 // validateOrGenerateCookie compares the client supplied server cookie with the one we
 // expect it to have. This is a little tricker than a binary comparison due to the use of
 // a slowly ticking timestamp in the cookie hash. This function also sets the server
@@ -125,35 +131,30 @@ func (t *request) findCookies() {
 // exactly 16 bytes long and contains a timestamp which is current or one tick behind.
 //
 // Returns true if the server cookie is valid. Regardless of validity, cookieOut is set
-// with the full cookie to send back to the client.
-
-const (
-	moduloMask   = 0xFFFFF000 // 0xFFF seconds ~= 1.14 hours
-	clockTick    = 0x1000     // How much the cookie clock increments each tick
-	minimumClock = clockTick  // We only ever allow going back one tick
-)
-
+// with the full cookie payload to send back to the client.
 func (t *request) validateOrGenerateCookie(secrets [2]uint64, unixTime int64) (valid bool) {
 	ourClock := uint32(unixTime & moduloMask)
 	if ourClock == 0 {
 		ourClock = minimumClock // Avoid RFC1982 contortions
 	}
 
-	var theirClock uint32                        // Zero ensures a cookie regen below
-	if len(t.serverCookie) == sCookieV1Length && // If it's a valid v1 cookie
-		t.serverCookie[0] == 1 &&
-		t.serverCookie[1] == 0 &&
+	var haveCookieOut bool                       // If t.cookieOut is valid
+	if len(t.serverCookie) == sCookieV1Length && // If it's a valid v1 cookie length
+		t.serverCookie[0] == 1 && // with a valid v1 version
+		t.serverCookie[1] == 0 && // and zero in the RFFU bytes
 		t.serverCookie[2] == 0 &&
 		t.serverCookie[3] == 0 {
-		theirClock = binary.BigEndian.Uint32(t.serverCookie[4:8])
+		theirClock := binary.BigEndian.Uint32(t.serverCookie[4:8])
 		if theirClock == ourClock || theirClock == (ourClock-clockTick) {
 			t.cookieOut = genV1Cookie(secrets, theirClock, t.src.String(),
 				t.clientCookie)
-			valid = bytes.Compare(t.serverCookie[:16], t.cookieOut[8:24]) == 0
+			haveCookieOut = theirClock == ourClock // Only true with current clock
+			valid = bytes.Compare(t.serverCookie[:sCookieV1Length],
+				t.cookieOut[8:8+sCookieV1Length]) == 0
 		}
 	}
 
-	if theirClock != ourClock { // If clocks differ then t.cookieOut is old or not present
+	if !haveCookieOut {
 		t.cookieOut = genV1Cookie(secrets, ourClock, t.src.String(), t.clientCookie)
 	}
 
@@ -177,8 +178,15 @@ func (t *request) validateOrGenerateCookie(secrets [2]uint64, unixTime int64) (v
 //
 // Returned full cookie string that is ultimately return to the client
 func genV1Cookie(secrets [2]uint64, clock uint32, clientIP string, clientCookie []byte) []byte {
-	h, _, _ := net.SplitHostPort(clientIP)
+	cookie := make([]byte, 8+32) // Largest size possible
+	h, _, err := net.SplitHostPort(clientIP)
+	if err != nil {
+		return cookie // Caller has failed
+	}
 	ip := net.ParseIP(h) // Convert everything back to binary
+	if ip == nil {
+		return cookie // Caller has failed
+	}
 
 	// Hash = ( Client Cookie | Version | Reserved | Timestamp | Client-IP, Server Secret )
 	//
@@ -186,7 +194,6 @@ func genV1Cookie(secrets [2]uint64, clock uint32, clientIP string, clientCookie 
 	// (and beyond) for the purposes of calculating the hash, then the first 4 bytes of the
 	// Client-IP are overwritten with the calculated hash.
 
-	cookie := make([]byte, 8+32)   // Largest size possible
 	copy(cookie, clientCookie[:8]) // findCookies assures us that this is exactly 8 bytes long
 	cookie[8] = 1                  // Version 1
 	binary.BigEndian.PutUint32(cookie[12:16], clock)

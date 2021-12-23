@@ -2,6 +2,7 @@ package main
 
 import (
 	"math/rand"
+	"strings"
 	"testing"
 
 	"github.com/markdingo/autoreverse/database"
@@ -42,11 +43,11 @@ func TestFormErr(t *testing.T) {
 	t.Run("Wrong op-code", func(t *testing.T) { testInvalid(t, server, m) })
 
 	// Check the logging output while we're at it
-	exp := `ru=FORMERR q=None/ s=127.0.0.2 id=0 h=U sz=12/0 C=0/0/0 Malformed Query
-ru=FORMERR q=SOA/example.net. s=127.0.0.2 id=1 h=U sz=12/0 C=0/0/0 Malformed Query
-ru=FORMERR q=SOA/example.net. s=127.0.0.2 id=1 h=U sz=12/0 C=0/0/0 Malformed Query
-ru=FORMERR q=SOA/example.net. s=127.0.0.2 id=1 h=U sz=12/0 C=0/0/0 Malformed Query
-ru=FORMERR q=SOA/example.net. s=127.0.0.2 id=1 h=U sz=12/0 C=0/0/0 Malformed Query
+	exp := `ru=FORMERR q=None/ s=127.0.0.2:4056 id=0 h=U sz=12/0 C=0/0/0 Malformed Query
+ru=FORMERR q=SOA/example.net. s=127.0.0.2:4056 id=1 h=U sz=12/0 C=0/0/0 Malformed Query
+ru=FORMERR q=SOA/example.net. s=127.0.0.2:4056 id=1 h=U sz=12/0 C=0/0/0 Malformed Query
+ru=FORMERR q=SOA/example.net. s=127.0.0.2:4056 id=1 h=U sz=12/0 C=0/0/0 Malformed Query
+ru=FORMERR q=SOA/example.net. s=127.0.0.2:4056 id=1 h=U sz=12/0 C=0/0/0 Malformed Query
 `
 	got := out.String()
 	if got != exp {
@@ -113,9 +114,9 @@ func TestProbe(t *testing.T) {
 	}
 
 	// Check logging output
-	exp := `ru=REFUSED q=MX/example.org. s=127.0.0.2 id=2 h=U sz=40/1232 C=0/0/1 Non-probe query during prone:out of bailiwick
-  Valid Probe received from 127.0.0.2
-ru=ok q=AAAA/cubyh.fozzy.example.net. s=127.0.0.2 id=1 h=U sz=103/1232 C=1/0/1 Probe match
+	exp := `ru=REFUSED q=MX/example.org. s=127.0.0.2:4056 id=2 h=U sz=40/1232 C=0/0/1 Non-probe query during prone:out of bailiwick
+  Valid Probe received from 127.0.0.2:4056
+ru=ok q=AAAA/cubyh.fozzy.example.net. s=127.0.0.2:4056 id=1 h=U sz=103/1232 C=1/0/1 Probe match
 `
 
 	got := out.String()
@@ -148,7 +149,7 @@ func TestWrongClass(t *testing.T) {
 	}
 
 	// Check error logging
-	exp := "ru=REFUSED q=NS/ns.hs. s=127.0.0.2 id=1 h=U sz=34/1232 C=0/0/1 Wrong class HS\n"
+	exp := "ru=REFUSED q=NS/ns.hs. s=127.0.0.2:4056 id=1 h=U sz=34/1232 C=0/0/1 Wrong class HS\n"
 	got := out.String()
 	if exp != got {
 		t.Error("Error log mismatch. Got:", got, "Exp:", exp)
@@ -166,7 +167,7 @@ func TestWrongClass(t *testing.T) {
 	}
 
 	// Check error logging
-	exp = "ru=REFUSED q=A/2021.a. s=127.0.0.2 id=1 h=U sz=35/1232 C=0/0/1 Wrong class C-2021\n"
+	exp = "ru=REFUSED q=A/2021.a. s=127.0.0.2:4056 id=1 h=U sz=35/1232 C=0/0/1 Wrong class C-2021\n"
 	got = out.String()
 	if exp != got {
 		t.Error("Error log mismatch. Got:", got, "Exp:", exp)
@@ -214,8 +215,8 @@ func TestServeBadPTR(t *testing.T) {
 	}
 
 	// Check logging
-	exp := `ru=NXDOMAIN q=PTR/0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.f.f.f.f.d.2.d.f.ip6.arpa. s=127.0.0.2 id=1 h=U sz=130/1232 C=0/1/1
-ru=NXDOMAIN q=PTR/fd2d:ffff::1 s=127.0.0.2 id=1 h=U sz=134/1232 C=0/1/1 No Synth
+	exp := `ru=NXDOMAIN q=PTR/0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.f.f.f.f.d.2.d.f.ip6.arpa. s=127.0.0.2:4056 id=1 h=U sz=130/1232 C=0/1/1
+ru=NXDOMAIN q=PTR/fd2d:ffff::1 s=127.0.0.2:4056 id=1 h=U sz=134/1232 C=0/1/1 No Synth
 `
 
 	got := out.String()
@@ -321,17 +322,17 @@ func TestMisc(t *testing.T) {
 	}
 
 	// Check logging
-	exp := `ru=ok q=TXT/version.bind. s=127.0.0.2 id=1 h=Un sz=87/1232 C=1/0/1
-ru=ok q=TXT/version.bind. s=127.0.0.2 id=1 h=U sz=77/1232 C=1/0/1
-ru=ok q=TXT/version.bind. s=127.0.0.2 id=1 h=U sz=77/600 C=1/0/1
-ru=ok q=TXT/version.bind. s=127.0.0.2 id=1 h=U sz=77/1231 C=1/0/1
-ru=ok q=TXT/version.bind. s=127.0.0.2 id=1 h=U sz=77/1232 C=1/0/1
-ru=NXDOMAIN q=A/192.0.2.misc.example.net. s=127.0.0.2 id=1 h=U sz=86/1232 C=0/1/1
-ru=NXDOMAIN q=A/192-0-2.misc.example.net. s=127.0.0.2 id=1 h=U sz=86/1232 C=0/1/1
-ru=NXDOMAIN q=A/fd2d::1.misc.example.net. s=127.0.0.2 id=1 h=U sz=86/1232 C=0/1/1
-ru=NXDOMAIN q=AAAA/fd2d::1.misc.example.net. s=127.0.0.2 id=1 h=U sz=86/1232 C=0/1/1
-ru=NXDOMAIN q=AAAA/fd2d--1--2.misc.example.net. s=127.0.0.2 id=1 h=U sz=89/1232 C=0/1/1
-ru=NXDOMAIN q=AAAA/192-0-2-1.misc.example.net. s=127.0.0.2 id=1 h=U sz=88/1232 C=0/1/1
+	exp := `ru=ok q=TXT/version.bind. s=127.0.0.2:4056 id=1 h=Un sz=106/1232 C=1/0/1
+ru=ok q=TXT/version.bind. s=127.0.0.2:4056 id=1 h=U sz=96/1232 C=1/0/1
+ru=ok q=TXT/version.bind. s=127.0.0.2:4056 id=1 h=U sz=96/600 C=1/0/1
+ru=ok q=TXT/version.bind. s=127.0.0.2:4056 id=1 h=U sz=96/1231 C=1/0/1
+ru=ok q=TXT/version.bind. s=127.0.0.2:4056 id=1 h=U sz=96/1232 C=1/0/1
+ru=NXDOMAIN q=A/192.0.2.misc.example.net. s=127.0.0.2:4056 id=1 h=U sz=86/1232 C=0/1/1
+ru=NXDOMAIN q=A/192-0-2.misc.example.net. s=127.0.0.2:4056 id=1 h=U sz=86/1232 C=0/1/1
+ru=NXDOMAIN q=A/fd2d::1.misc.example.net. s=127.0.0.2:4056 id=1 h=U sz=86/1232 C=0/1/1
+ru=NXDOMAIN q=AAAA/fd2d::1.misc.example.net. s=127.0.0.2:4056 id=1 h=U sz=86/1232 C=0/1/1
+ru=NXDOMAIN q=AAAA/fd2d--1--2.misc.example.net. s=127.0.0.2:4056 id=1 h=U sz=89/1232 C=0/1/1
+ru=NXDOMAIN q=AAAA/192-0-2-1.misc.example.net. s=127.0.0.2:4056 id=1 h=U sz=88/1232 C=0/1/1
 `
 	got := out.String()
 	if exp != got {
@@ -400,18 +401,102 @@ func TestGoodAnswers(t *testing.T) {
 	}
 
 	// Check logs
-	exp := `ru=ok q=PTR/fd2d:ffff::1 s=127.0.0.2 id=10 h=U sz=205/1232 C=1/0/1 Synth
-ru=ok q=PTR/fd2d:ffff::f0:0:0:2 s=127.0.0.2 id=11 h=U sz=212/1232 C=1/0/1 Synth
-ru=ok q=PTR/192.0.2.1 s=127.0.0.2 id=12 h=U sz=102/1232 C=1/0/1 Synth
-ru=ok q=PTR/192.0.2.254 s=127.0.0.2 id=13 h=U sz=108/1232 C=1/0/1 Synth
-ru=ok q=A/192-0-2-1.a.zig. s=127.0.0.2 id=14 h=U sz=75/1232 C=1/0/1
-ru=ok q=A/192-0-2-254.a.zig. s=127.0.0.2 id=15 h=U sz=79/1232 C=1/0/1
-ru=ok q=AAAA/fd2d-ffff--1.a.zig. s=127.0.0.2 id=16 h=U sz=93/1232 C=1/0/1
-ru=ok q=AAAA/fd2d-ffff--f0-0-0-2.a.zig. s=127.0.0.2 id=17 h=U sz=107/1232 C=1/0/1
+	exp := `ru=ok q=PTR/fd2d:ffff::1 s=127.0.0.2:4056 id=10 h=U sz=205/1232 C=1/0/1 Synth
+ru=ok q=PTR/fd2d:ffff::f0:0:0:2 s=127.0.0.2:4056 id=11 h=U sz=212/1232 C=1/0/1 Synth
+ru=ok q=PTR/192.0.2.1 s=127.0.0.2:4056 id=12 h=U sz=102/1232 C=1/0/1 Synth
+ru=ok q=PTR/192.0.2.254 s=127.0.0.2:4056 id=13 h=U sz=108/1232 C=1/0/1 Synth
+ru=ok q=A/192-0-2-1.a.zig. s=127.0.0.2:4056 id=14 h=U sz=75/1232 C=1/0/1
+ru=ok q=A/192-0-2-254.a.zig. s=127.0.0.2:4056 id=15 h=U sz=79/1232 C=1/0/1
+ru=ok q=AAAA/fd2d-ffff--1.a.zig. s=127.0.0.2:4056 id=16 h=U sz=93/1232 C=1/0/1
+ru=ok q=AAAA/fd2d-ffff--f0-0-0-2.a.zig. s=127.0.0.2:4056 id=17 h=U sz=107/1232 C=1/0/1
 `
 	got := out.String()
 	if exp != got {
 		t.Error("PTR log mismatch. Exp", exp, "Got", got)
+	}
+}
+
+func TestCookies(t *testing.T) {
+	var testCases = []struct {
+		addQuery bool
+		in, out  string
+		rcode    int
+		note     string
+	}{
+		{false, "0123456789abcdef", "", dns.RcodeSuccess, "Cookie-only"},
+		{true, "", "", dns.RcodeFormatError, "Malformed"},                   // No cCookie
+		{true, "01", "", dns.RcodeFormatError, "Malformed"},                 // Short cCookie
+		{true, "0123456789abcdefab", "", dns.RcodeFormatError, "Malformed"}, // Short sCookie
+		{true, "0123456789abcdefab", "", dns.RcodeFormatError, "Malformed"}, // Short sCookie
+		{true, "0123456789abcdef010000000000200078f6dcfbf17e8504",
+			"0123456789abcdef01000000", dns.RcodeSuccess,
+			"mismatch"}, // Short sCookie
+	}
+
+	out := &mock.IOWriter{}
+	log.SetOut(out)
+	log.SetLevel(log.MajorLevel)
+	wtr := &mock.ResponseWriter{}
+	res := resolver.NewResolver()
+	cfg := &config{logQueriesFlag: true, chaosFlag: true}
+	server := newServer(cfg, database.NewGetter(), res, "", "")
+	server.setMutables("", nil, []*delegation.Authority{})
+
+	for ix, tc := range testCases {
+		query := new(dns.Msg)
+		query.Id = uint16(ix)
+		if tc.addQuery {
+			query.Question = append(query.Question,
+				dns.Question{Name: "version.bind.", Qclass: dns.ClassCHAOS, Qtype: dns.TypeTXT})
+		}
+		opt := new(dns.OPT)
+		opt.Hdr.Name = "."
+		opt.Hdr.Rrtype = dns.TypeOPT
+		e := new(dns.EDNS0_COOKIE)
+		e.Code = dns.EDNS0COOKIE
+		e.Cookie = tc.in
+		opt.Option = append(opt.Option, e)
+		query.Extra = append(query.Extra, opt)
+
+		out.Reset()
+		server.ServeDNS(wtr, query)
+
+		resp := wtr.Get()
+		if resp == nil {
+			t.Fatal(ix, "Setup error - No response to cookie query")
+		}
+		s := out.String()
+
+		if resp.Rcode != tc.rcode {
+			t.Error(ix, "Wrong rcode. Expected", dnsutil.RcodeToString(tc.rcode),
+				"got", dnsutil.RcodeToString(resp.Rcode))
+			t.Log(s)
+		}
+		if len(tc.out) > 0 {
+			opt = resp.IsEdns0()
+			if opt == nil {
+				t.Fatal(ix, "OPT Missing from response")
+			}
+			var so *dns.EDNS0_COOKIE
+			var ok bool
+			for _, subopt := range opt.Option {
+				if so, ok = subopt.(*dns.EDNS0_COOKIE); ok {
+					break
+				}
+			}
+			if so == nil {
+				t.Fatal(ix, "dns.EDNS0_COOKIE not in OPT")
+			}
+			if !strings.Contains(so.Cookie, tc.out) {
+				t.Error(ix, "Out mis-match. Expect:", tc.out, "in", so.Cookie)
+				t.Log(s)
+			}
+		}
+
+		if !strings.Contains(s, tc.note) {
+			t.Error(ix, "Wrong lognote. Expected", tc.note)
+			t.Log(s)
+		}
 	}
 }
 

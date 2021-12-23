@@ -1,11 +1,10 @@
 package main
 
 import (
-	"encoding/hex"
 	"fmt"
-	"time"
 	"net"
 	"strings"
+	"time"
 
 	"github.com/miekg/dns"
 
@@ -42,9 +41,9 @@ func (t *server) ServeDNS(wtr dns.ResponseWriter, query *dns.Msg) {
 		req.nsidOut = t.cfg.nsidAsHex
 	}
 
-	// We don't really do much with cookies yet apart from exchange them with clients
-	// and note whether they are correct or not. Mostly this is laying the ground-work
-	// so that it's easy to add differentiation later.
+	// We don't take any action based on cookies yet apart from exchange them with
+	// clients and note whether they are correct or not. Mostly this is laying the
+	// ground-work so that it's easy to add differentiation later.
 
 	req.findCookies()
 	if req.cookiesPresent {
@@ -63,11 +62,6 @@ func (t *server) ServeDNS(wtr dns.ResponseWriter, query *dns.Msg) {
 			}
 		}
 		req.stats.gen.cookie++
-		log.Majorf("Cookies: qo=%t C=(%d) %s S=(%d) %s out=%s",
-			len(req.query.Question) == 0,
-			len(req.clientCookie), hex.EncodeToString(req.clientCookie),
-			len(req.serverCookie), hex.EncodeToString(req.serverCookie),
-			hex.EncodeToString(req.cookieOut))
 	}
 
 	// Is this a cookie-only request?

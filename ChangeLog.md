@@ -1,4 +1,5 @@
 # autoreverse Change Log
+### v1.1.0 -- 2021-12-23
   * Add rfc7873, rfc9018 DNS Cookie support
   * Add a trigger reason to the zone reload log message
   * Use dnsutil.*ToString instead of dns.*ToString to render unmapped values

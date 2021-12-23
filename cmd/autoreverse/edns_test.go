@@ -1,53 +1,187 @@
 package main
 
 import (
-	"net"
+	"bytes"
+	"encoding/hex"
 	"testing"
 
 	"github.com/miekg/dns"
+
+	"github.com/markdingo/autoreverse/mock"
 )
 
-func TestCookies(t *testing.T) {
-	testCases := []struct {
-		input          string
-		present, valid bool
-		client, server string
-	}{
-		{"0123456789", true, false,
-			"0123456789", ""}, // Client short
-		{"0123456789abcdef", true, true,
-			"0123456789abcdef", ""}, // Client only good
-		{"0123456789abcdeffedcba9876543210", true, true,
-			"0123456789abcdef", "fedcba9876543210"},
-		{"0123456789abcdeffe", true, false,
-			"0123456789abcdef", "fe"}, // Server short
-		{"0123456789abcdeffedcba9876543210fedcba9876543210fe",
-			true, true,
-			"0123456789abcdef", "fedcba9876543210fedcba9876543210fe"}, // Server long
+func TestFindNSID(t *testing.T) {
+	query := setQuestion(dns.ClassINET, dns.TypeA, "localhost.")
+	o := new(dns.OPT)
+	o.Hdr.Name = "."
+	o.Hdr.Rrtype = dns.TypeOPT
+	e := new(dns.EDNS0_NSID)
+	o.Option = append(o.Option, e)
+	query.Extra = append(query.Extra, o)
+	req := newRequest(query, nil, "udp")
+	req.opt = o
+
+	nsid := req.findNSID()
+	if nsid == nil {
+		t.Error("Failed to find NSID opt")
+	}
+}
+
+func TestGenOpt(t *testing.T) {
+	query := setQuestion(dns.ClassINET, dns.TypeA, "localhost.")
+	req := newRequest(query, nil, "udp")
+	o := req.genOpt()
+	if o != nil {
+		t.Error("Did not expect an OPT with no settings")
 	}
 
+	req.maxSize = 800
+	req.nsidOut = "abcd"
+	cCookie, _ := hex.DecodeString("0123456789abcdef")
+	sCookie, _ := hex.DecodeString("abcdef0123456789")
+	req.cookieOut = cCookie
+	req.cookieOut = append(req.cookieOut, sCookie...)
+	o = req.genOpt()
+	if o == nil {
+		t.Fatal("Expected an OPT")
+	}
+	req.opt = o
+
+	mz := req.opt.UDPSize()
+	if mz != 800 {
+		t.Error("UDPSize did not make it to OPT", mz)
+	}
+
+	e := req.findNSID()
+	if e == nil {
+		t.Error("Expected to find NSID sub-opt")
+	} else {
+		nsid := e.Nsid
+		if nsid != "abcd" {
+			t.Error("NSID mismatch. Exp: abcd, Got:", nsid)
+		}
+	}
+
+	req.findCookies()
+	if !req.cookiesPresent {
+		t.Error("Cookies should be present")
+	}
+	if bytes.Compare(req.clientCookie, cCookie) != 0 {
+		t.Errorf("Client cookie did not transfer %x", req.clientCookie)
+	}
+	if bytes.Compare(req.serverCookie, sCookie) != 0 {
+		t.Errorf("Server cookie did not transfer %x", req.serverCookie)
+	}
+}
+
+func TestGenV1Cookie(t *testing.T) {
+	ip := "0.0.0.0:53"
+	var secrets [2]uint64
+	var clock uint32
+	var cCookie [8]byte
+	got := genV1Cookie(secrets, clock, ip, cCookie[:])
+	expect, _ := hex.DecodeString("000000000000000001000000000000009cfc753b7275ad7f")
+	if bytes.Compare(got, expect[:]) != 0 {
+		t.Errorf("Zero-value cookie wrong. Expected: %x Got %x\n", expect, got)
+	}
+
+	clock++
+	got = genV1Cookie(secrets, clock, ip, cCookie[:])
+	if bytes.Compare(got, expect[:]) == 0 {
+		t.Errorf("Clock-tick cookie should have changed")
+	}
+	clock = 0
+
+	secrets[0] = 1
+	got = genV1Cookie(secrets, clock, ip, cCookie[:])
+	if bytes.Compare(got, expect[:]) == 0 {
+		t.Errorf("New secrets cookie should have changed")
+	}
+	secrets[0] = 0
+
+	ip = "0.0.0.1:53"
+	got = genV1Cookie(secrets, clock, ip, cCookie[:])
+	if bytes.Compare(got, expect[:]) == 0 {
+		t.Errorf("New IP cookie should have changed")
+	}
+	ip = "0.0.0.0:53"
+
+	cCookie[0] = 1
+	got = genV1Cookie(secrets, clock, ip, cCookie[:])
+	if bytes.Compare(got, expect[:]) == 0 {
+		t.Errorf("New cCookie cookie should have changed")
+	}
+	cCookie[0] = 0
+}
+
+func TestValidateOrGenerate(t *testing.T) {
+	testCases := []struct {
+		ipv4           bool
+		client, server string
+		unixTime       int64
+		valid          bool
+		output         string
+	}{
+		{true, "0123456789abcdef", "", 0x2000, false, // No sCookie
+			"0123456789abcdef010000000000200078f6dcfbf17e8504"},
+
+		{true, "0123456789abcdef", "010000000000200078f6dcfbf17e8504", 0x2000, true,
+			"0123456789abcdef010000000000200078f6dcfbf17e8504"}, // Correct sCookie
+
+		{true, "0123456789abcdef", "010000000000200078f6dcfbf17e8504", 0x3000, true, // Tick * 1
+			"0123456789abcdef0100000000003000369b05d1959264ce"}, // Correct sCookie
+
+		{true, "0123456789abcdef", "010000000000200078f6dcfbf17e8504", 0x4000, false, // Tick * 2
+			"0123456789abcdef0100000000004000594425a29c423e1d"}, // Old sCookie
+
+		{true, "0123456789abcdef", "0200000000001000e99b04f5b59e5343", 0x2000, false, // Version
+			"0123456789abcdef010000000000200078f6dcfbf17e8504"},
+
+		{true, "0123456789abcdef", "0101000000001000e99b04f5b59e5343", 0x2000, false, // RFFU
+			"0123456789abcdef010000000000200078f6dcfbf17e8504"},
+
+		{false, "0123456789abcdef", "", 0x2000, false, // No sCookie
+			"0123456789abcdef010000000000200091992114bd52a849"},
+
+		{false, "0123456789abcdef", "010000000000200091992114bd52a849", 0x2000, true,
+			"0123456789abcdef010000000000200091992114bd52a849"}, // Correct sCookie
+
+	}
+
+	var secrets [2]uint64
 	for ix, tc := range testCases {
 		query := setQuestion(dns.ClassCHAOS, dns.TypeTXT, "version.bind.")
-		o := new(dns.OPT)
-		o.Hdr.Name = "."
-		o.Hdr.Rrtype = dns.TypeOPT
-		e := new(dns.EDNS0_COOKIE)
-		e.Code = dns.EDNS0COOKIE
-		e.Cookie = tc.input
-		o.Option = append(o.Option, e)
-		query.Extra = append(query.Extra, o)
-		var src net.Addr
+		var ip string
+		if tc.ipv4 {
+			ip = "127.0.0.1:53"
+		} else {
+			ip = "[::1]:4051"
+		}
+		src := mock.NewNetAddr("udp", ip)
 		req := newRequest(query, src, "udp")
-		req.opt = o
-		req.findCookies()
-		if req.cookiesValid != tc.valid {
-			t.Error(ix, "Valids mismatch. Exp:", tc.valid, "Got:", req.cookiesValid)
+		req.clientCookie, _ = hex.DecodeString(tc.client)
+		req.serverCookie, _ = hex.DecodeString(tc.server)
+		v := req.validateOrGenerateCookie(secrets, tc.unixTime)
+		if v != tc.valid {
+			t.Error("Err", ix, "Valid mismatch. Expected", tc.valid)
 		}
-		if req.clientCookie != tc.client {
-			t.Error(ix, "Clients mismatch. Exp:", tc.client, "Got:", req.clientCookie)
+		if len(tc.output) > 0 { // Is output expected?
+			exp, _ := hex.DecodeString(tc.output)
+			if bytes.Compare(exp, req.cookieOut) != 0 {
+				t.Errorf("Err %d cookieOut mismatch. Got %x. Exp %s\n",
+					ix, req.cookieOut, tc.output)
+			}
 		}
-		if req.serverCookie != tc.server {
-			t.Error(ix, "Servers mismatch. Exp:", tc.server, "Got:", req.serverCookie)
-		}
+	}
+}
+
+// 82 ns/op on a mac m1, so pretty fast
+func BenchmarkGenV1Cookie(b *testing.B) {
+	ip := "0.0.0.0:53"
+	var secrets [2]uint64
+	var clock uint32
+	var cCookie [8]byte
+	for i := 0; i < b.N; i++ {
+		genV1Cookie(secrets, clock, ip, cCookie[:])
 	}
 }
