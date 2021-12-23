@@ -128,11 +128,15 @@ func TestValidateOrGenerate(t *testing.T) {
 		{true, "0123456789abcdef", "010000000000200078f6dcfbf17e8504", 0x2000, true,
 			"0123456789abcdef010000000000200078f6dcfbf17e8504"}, // Correct sCookie
 
-		{true, "0123456789abcdef", "010000000000200078f6dcfbf17e8504", 0x3000, true, // Tick * 1
-			"0123456789abcdef0100000000003000369b05d1959264ce"}, // Correct sCookie
+		// TS is within range, but is GT reissue gap so a new cookie is expected
+		{true, "0123456789abcdef", "010000000000200078f6dcfbf17e8504",
+			0x2000 + maxBehindGap - 1, true,
+			"0123456789abcdef0100000000002e0f2ef2835de77f0e45"},
 
-		{true, "0123456789abcdef", "010000000000200078f6dcfbf17e8504", 0x4000, false, // Tick * 2
-			"0123456789abcdef0100000000004000594425a29c423e1d"}, // Old sCookie
+		// TS is too old, should fail and get a new cookie
+		{true, "0123456789abcdef", "010000000000200078f6dcfbf17e8504",
+			0x2000 + maxBehindGap + 1, false,
+			"0123456789abcdef0100000000002e113c19eb1777e9d7e0"},
 
 		{true, "0123456789abcdef", "0200000000001000e99b04f5b59e5343", 0x2000, false, // Version
 			"0123456789abcdef010000000000200078f6dcfbf17e8504"},
@@ -140,12 +144,12 @@ func TestValidateOrGenerate(t *testing.T) {
 		{true, "0123456789abcdef", "0101000000001000e99b04f5b59e5343", 0x2000, false, // RFFU
 			"0123456789abcdef010000000000200078f6dcfbf17e8504"},
 
+		// IPV6
 		{false, "0123456789abcdef", "", 0x2000, false, // No sCookie
 			"0123456789abcdef010000000000200091992114bd52a849"},
 
 		{false, "0123456789abcdef", "010000000000200091992114bd52a849", 0x2000, true,
 			"0123456789abcdef010000000000200091992114bd52a849"}, // Correct sCookie
-
 	}
 
 	var secrets [2]uint64
@@ -170,6 +174,38 @@ func TestValidateOrGenerate(t *testing.T) {
 			if bytes.Compare(exp, req.cookieOut) != 0 {
 				t.Errorf("Err %d cookieOut mismatch. Got %x. Exp %s\n",
 					ix, req.cookieOut, tc.output)
+			}
+		}
+	}
+}
+
+func TestNormalizeTimestamps(t *testing.T) {
+	testCases := []struct {
+		ourClock, theirClock uint32
+		oursGreater          bool
+	}{
+		{0x10, 0x2, true},       // Regular values - no wrap
+		{0x80000001, 0x2, true}, // ours-theirs is one shy of wrapDistance
+
+		{0x80000007, 0x7, false}, // ours-theirs equals wrapDistance
+		{0x7, 0x80000007, false}, // The undefined cases mentioned in in rfc1982
+
+		{0x80000102, 0x100, true}, // ours-theirs > wrapDistance
+
+		{0x2, 0x80000001, false}, // Test bottom half of conditional
+		{0x100, 0x80000102, false},
+		{0x100, 0x80000102, false},
+	}
+
+	for ix, tc := range testCases {
+		ourClock64, theirClock64 := normalizeTimestamps(tc.ourClock, tc.theirClock)
+		if tc.oursGreater {
+			if ourClock64 <= theirClock64 {
+				t.Error(ix, ourClock64, "Not Greater", theirClock64)
+			}
+		} else {
+			if ourClock64 > theirClock64 {
+				t.Error(ix, ourClock64, "Is Greater", theirClock64)
 			}
 		}
 	}

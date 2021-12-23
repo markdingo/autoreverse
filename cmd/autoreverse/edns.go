@@ -116,46 +116,73 @@ func (t *request) findCookies() {
 }
 
 const (
-	moduloMask   = 0xFFFFF000 // 0xFFF seconds ~= 1.14 hours
-	clockTick    = 0x1000     // How much the cookie clock increments each tick
-	minimumClock = clockTick  // We only ever allow going back one tick
+	wrapDistance = uint64(1<<31) - 1 // Assume wrap if gap is greater than this
+	maxBehindGap = 60 * 60           // Timestamps older than this are ignored (seconds)
+	maxAheadGap  = 60 * 5            // Timestamps ahead by more than this much are ignored
+	reissueGap   = maxAheadGap / 2   // Reissue cookie if their clock is getting old
 )
 
 // validateOrGenerateCookie compares the client supplied server cookie with the one we
-// expect it to have. This is a little tricker than a binary comparison due to the use of
-// a slowly ticking timestamp in the cookie hash. This function also sets the server
-// cookie to be returned to the client, which again may differ if the timestamp has ticked
-// over since we last sent this client a cookie.
+// expect it to have.
 //
-// In terms of trusting the client we only consider a server cookie if it's version '1',
-// exactly 16 bytes long and contains a timestamp which is current or one tick behind.
+// A valid timestamp is in the range of now-maxBehindGap and now+maxAheadGap. That is, no
+// more than an hour behind or five minutes ahead. The ahead isn't relevant to us as we
+// don't share secrets with potential anycast peers, but it's a useful validation check in
+// its own right.
+//
+// If their timestamp is behind by more than reissueGap, generate a new cookie for them
+// otherwise send their current cookie back to them.
+//
+// The timestamp is Unix time stored in a uint32 so we have to worry about "serial number
+// arithmetic". The way we deal with this is to get normalizeTimestamps() to convert them
+// both to uint64 and add "SERIAL_BITS" to the "smaller" number. Then we just treat them
+// as regular integers.
 //
 // Returns true if the server cookie is valid. Regardless of validity, cookieOut is set
 // with the full cookie payload to send back to the client.
 func (t *request) validateOrGenerateCookie(secrets [2]uint64, unixTime int64) (valid bool) {
-	ourClock := uint32(unixTime & moduloMask)
-	if ourClock == 0 {
-		ourClock = minimumClock // Avoid RFC1982 contortions
-	}
-
-	var haveCookieOut bool                       // If t.cookieOut is valid
+	now := uint32(unixTime & 0xFFFFFFFF)
+	var now64, ts64 uint64
 	if len(t.serverCookie) == sCookieV1Length && // If it's a valid v1 cookie length
 		t.serverCookie[0] == 1 && // with a valid v1 version
 		t.serverCookie[1] == 0 && // and zero in the RFFU bytes
 		t.serverCookie[2] == 0 &&
 		t.serverCookie[3] == 0 {
-		theirClock := binary.BigEndian.Uint32(t.serverCookie[4:8])
-		if theirClock == ourClock || theirClock == (ourClock-clockTick) {
-			t.cookieOut = genV1Cookie(secrets, theirClock, t.src.String(),
-				t.clientCookie)
-			haveCookieOut = theirClock == ourClock // Only true with current clock
+		ts := binary.BigEndian.Uint32(t.serverCookie[4:8])
+		now64, ts64 = normalizeTimestamps(now, ts)
+		if (ts64+maxBehindGap > now64) && (now64+maxAheadGap) > ts64 { // in range?
+			t.cookieOut = genV1Cookie(secrets, ts, t.src.String(), t.clientCookie)
 			valid = bytes.Compare(t.serverCookie[:sCookieV1Length],
 				t.cookieOut[8:8+sCookieV1Length]) == 0
 		}
 	}
 
-	if !haveCookieOut {
-		t.cookieOut = genV1Cookie(secrets, ourClock, t.src.String(), t.clientCookie)
+	// If invalid or getting old, reissue
+	if !valid || ts64+reissueGap < now64 {
+		t.cookieOut = genV1Cookie(secrets, now, t.src.String(), t.clientCookie)
+	}
+
+	return
+}
+
+// normalizeTimestamps converts "serial number arithmetic" uint32s into regular comparable
+// uint64 integers. In essence this means adding the capacity of a uint32 to the lower
+// number if is determined to have wrapped. The lower number is considered to have wrapped
+// (and thus actually be higher) if the difference in absolute terms is greater than half
+// the capacity of a uint32.
+//
+// In the context of DNS Cookies, this code has relevance once every 68 years for about an
+// hour...
+func normalizeTimestamps(a, b uint32) (A, B uint64) {
+	A = uint64(a)
+	B = uint64(b)
+	if A > B && (A-B) > wrapDistance { // Is A is ahead by more than 1/2 a uint32
+		B += wrapDistance + 1 // then presume B is ahead and wrapped
+		return
+	}
+
+	if B > A && (B-A) > wrapDistance { // If B is ahead by more than 1/2 a uint32
+		A += wrapDistance + 1 // then presume A is ahead and wrapped
 	}
 
 	return
