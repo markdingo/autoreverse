@@ -13,7 +13,7 @@ import (
 	"github.com/markdingo/autoreverse/log"
 )
 
-// request contains the DNS request, related material and accumulated reponse data which
+// request contains the DNS request, related material and accumulated response data which
 // is gradually extracted as request processing progresses. Rather than pass all of this
 // data around as a fleet of function parameters it all gets accumulated into this request
 // struct. The main purpose is readability and simplicity of adding variables as

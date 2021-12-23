@@ -12,7 +12,7 @@ var (
 )
 
 // ResponseWriter is a mock replacement for the miekg dns.ResponseWriter. It's used for
-// tests only. It contains a response message that is arbitarily returned.
+// tests only. It contains a response message that is arbitrarily returned.
 type ResponseWriter struct {
 	m *dns.Msg // Saved by writeMsg
 }

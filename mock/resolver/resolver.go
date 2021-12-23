@@ -27,6 +27,8 @@ type mockResolver struct {
 	dir string
 }
 
+// NewResolver creates a mock resolver which uses the supplied directory as the location
+// of mock files to parse to produce dns lookup responses.
 func NewResolver(dir string) *mockResolver {
 	return &mockResolver{dir: dir}
 }

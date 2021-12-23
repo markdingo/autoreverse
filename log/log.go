@@ -79,7 +79,7 @@ func IfMinor() bool {
 	return level >= MinorLevel
 }
 
-// IfDebuf returns true if Debug, Minor or Major logging is enabled.
+// IfDebug returns true if Debug, Minor or Major logging is enabled.
 func IfDebug() bool {
 	return level >= DebugLevel
 }
