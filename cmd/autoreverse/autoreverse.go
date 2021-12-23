@@ -80,9 +80,15 @@ func (t *autoReverse) addAuthority(add *delegation.Authority) bool {
 	return true
 }
 
-var cookieSecrets [2]uint64
-
-func init() {
+// Open Listen sockets and start servers. Does not return until all servers have started
+// or an error is detected.
+//
+// The server secrets for cookie generation are set here. Note that strictly the secret
+// should be configurable so that anycast DNS servers can all generate the same cookie,
+// but it's extremely unlikely that autoreverse will be used in that scenario, so for now,
+// we just use a cryptographically strong random value.
+func (t *autoReverse) startServers() {
+	var cookieSecrets [2]uint64
 	b := make([]byte, 16) // Effectively two uint64s
 	rand.Read(b)          // as needed by siphash-2-4
 	for ix := 0; ix < 16; ix = ix + 2 {
@@ -91,16 +97,7 @@ func init() {
 		cookieSecrets[0] |= uint64(b[ix])
 		cookieSecrets[1] |= uint64(b[ix+1])
 	}
-}
 
-// Open Listen sockets and start servers. Does not return until all servers have started
-// or an error is detected.
-//
-// The server secret for cookie generation is set here. Note that strictly the secret
-// should be configurable so that anycast DNS servers can all generate the same cookie,
-// but it's extremely unlikely that autoreverse will be used in that scenario, so for now,
-// we just use a cryptographically strong random value.
-func (t *autoReverse) startServers() {
 	for _, network := range []string{dnsutil.UDPNetwork, dnsutil.TCPNetwork} {
 		for _, addr := range t.cfg.listen {
 			srv := newServer(t.cfg, t.dbGetter, t.resolver, network, addr)
