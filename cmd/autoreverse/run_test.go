@@ -29,7 +29,6 @@ func TestRun(t *testing.T) {
 		"Signal",
 		"log-queries=true",
 		"log-queries=false",
-		"reserved for future use",
 		"PTR-deduce reload",
 		"LoadAllZones Total Deduced PTRs",
 		"initiates shutdown",
@@ -51,9 +50,9 @@ func TestRun(t *testing.T) {
 	go ar.Run()
 	time.Sleep(time.Second * 4) // Give stats report time to trigger
 
-	// Send all non-terminating signals and toggle USR1 (--log-queries toggle)
+	// Send all non-terminating signals and toggle USR2 (--log-queries toggle)
 
-	for _, sig := range []os.Signal{syscall.SIGUSR1, syscall.SIGUSR2, syscall.SIGINT, syscall.SIGHUP, syscall.SIGUSR2} {
+	for _, sig := range []os.Signal{syscall.SIGUSR1, syscall.SIGHUP, syscall.SIGUSR2, syscall.SIGUSR2} {
 		ar.sig <- sig
 		time.Sleep(time.Millisecond * 100)
 	}
@@ -66,6 +65,7 @@ func TestRun(t *testing.T) {
 	for _, s := range testCases {
 		if !strings.Contains(got, s) {
 			t.Error("Does not contain", s)
+			t.Error(got)
 		}
 	}
 }
