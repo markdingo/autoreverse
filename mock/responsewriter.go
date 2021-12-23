@@ -7,8 +7,8 @@ import (
 )
 
 var (
-	local  = NewNetAddr("udp", "127.0.0.1")
-	remote = NewNetAddr("udp", "127.0.0.2")
+	local  = NewNetAddr("udp", "127.0.0.1:53")
+	remote = NewNetAddr("udp", "127.0.0.2:4056")
 )
 
 // ResponseWriter is a mock replacement for the miekg dns.ResponseWriter. It's used for

@@ -45,7 +45,7 @@ func TestChaos(t *testing.T) {
 	}
 
 	// Check error logging
-	exp := "ru=REFUSED q=NS/version.bind. s=127.0.0.2 id=1 h=U sz=41/1232 C=0/0/1 Wrong class CH\n"
+	exp := "ru=REFUSED q=NS/version.bind. s=127.0.0.2:4056 id=1 h=U sz=41/1232 C=0/0/1 Wrong class CH\n"
 	got := out.String()
 	if exp != got {
 		t.Error("Error log mismatch", got, exp)
@@ -66,7 +66,7 @@ func TestChaos(t *testing.T) {
 	}
 
 	// Check error logging
-	exp = "ru=REFUSED q=TXT/version.bind. s=127.0.0.2 id=2 h=U sz=41/1232 C=0/0/1 Wrong class CH\n"
+	exp = "ru=REFUSED q=TXT/version.bind. s=127.0.0.2:4056 id=2 h=U sz=41/1232 C=0/0/1 Wrong class CH\n"
 	got = out.String()
 	if exp != got {
 		t.Error("Error log mismatch", got, exp)
@@ -113,12 +113,12 @@ func TestChaos(t *testing.T) {
 	}
 
 	// Check logging to confirm responses - good enough
-	exp = `ru=ok q=TXT/version.bind. s=127.0.0.2 id=3 h=U sz=106/1232 C=1/0/1
-ru=ok q=TXT/version.server. s=127.0.0.2 id=4 h=U sz=110/1232 C=1/0/1
-ru=ok q=TXT/authors.bind. s=127.0.0.2 id=5 h=U sz=106/1232 C=1/0/1
-ru=ok q=TXT/hostname.bind. s=127.0.0.2 id=6 h=U sz=73/1232 C=1/0/1
-ru=ok q=TXT/id.server. s=127.0.0.2 id=7 h=U sz=65/1232 C=1/0/1
-ru=REFUSED q=TXT/nope. s=127.0.0.2 id=8 h=U sz=33/1232 C=0/0/1
+	exp = `ru=ok q=TXT/version.bind. s=127.0.0.2:4056 id=3 h=U sz=106/1232 C=1/0/1
+ru=ok q=TXT/version.server. s=127.0.0.2:4056 id=4 h=U sz=110/1232 C=1/0/1
+ru=ok q=TXT/authors.bind. s=127.0.0.2:4056 id=5 h=U sz=106/1232 C=1/0/1
+ru=ok q=TXT/hostname.bind. s=127.0.0.2:4056 id=6 h=U sz=73/1232 C=1/0/1
+ru=ok q=TXT/id.server. s=127.0.0.2:4056 id=7 h=U sz=65/1232 C=1/0/1
+ru=REFUSED q=TXT/nope. s=127.0.0.2:4056 id=8 h=U sz=33/1232 C=0/0/1
 `
 	got = out.String()
 	if exp != got {

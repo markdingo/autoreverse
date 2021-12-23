@@ -65,9 +65,9 @@ func TestPassthru(t *testing.T) {
 	}
 
 	// Check error logging
-	exp := `ru=ok q=NS/ns.example.net. s=127.0.0.2 id=0 h=U sz=0/1232 C=0/0/0 passthru:Connection refused
-ru=ok q=NS/ns.example.net. s=127.0.0.2 id=0 h=U sz=0/1232 C=0/0/0 passthru:Timeout
-ru=ok q=NS/ns.example.net. s=127.0.0.2 id=1 h=U sz=76/1232 C=1/0/0 passthru
+	exp := `ru=ok q=NS/ns.example.net. s=127.0.0.2:4056 id=0 h=U sz=0/1232 C=0/0/0 passthru:Connection refused
+ru=ok q=NS/ns.example.net. s=127.0.0.2:4056 id=0 h=U sz=0/1232 C=0/0/0 passthru:Timeout
+ru=ok q=NS/ns.example.net. s=127.0.0.2:4056 id=1 h=U sz=76/1232 C=1/0/0 passthru
 `
 	got := out.String()
 	if exp != got {
