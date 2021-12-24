@@ -164,7 +164,8 @@ something like this:
 which defines a single in-bailiwick name server of `autoreverse.yourdomain` and makes
 `autoreverse` authoritative for supplying that information.
 
-If you prefer, The NS entry need not be in-bailiwick, as shown with this snippet:
+If you prefer, the name server addresses need not be in-bailiwick, as shown with this
+snippet:
 
 
 ```sh
@@ -177,7 +178,7 @@ outerns      IN AAAA 2001:db8:aa:bb::53          << Snippet to add
 ```
 
 which works just as well. The main difference being that the parent zone is authoritative
-for the NS address records rather than `autoreverse`.
+for the name server address records rather than `autoreverse`.
 
 The main reason for preferring the former snippet is that the `autoreverse` query log
 provides more insight into who is making reverse queries.
