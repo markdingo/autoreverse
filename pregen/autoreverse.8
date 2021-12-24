@@ -531,6 +531,24 @@ This option is most likely of use in NAT/port-forwarding scenarios where a local
 authority server is already running on port 53 on a single routable
 .Sy IPv4
 address.
+.Pp
+Be aware that DNS Cookies returned by the
+.Ar auth-server
+will not match those sent by
+.Nm
+which means clients will see
+.Sy two
+DNS Cookies from the same server IP address. Since clients only retain the most recent DNS
+Cookie they are likely to send back the wrong one when sending queries which are sometimes
+answered by
+.Nm
+and other times answered by the
+.Ar auth-server .
+There is no impact when
+.Nm
+received bad server cookies (at this stage), but there may be some if the
+.Ar auth-server
+de-prioritizes bad server cookies.
 .It Fl -report Ar time.Duration
 Interval between printing statistics reports expressed in
 .Ql go
