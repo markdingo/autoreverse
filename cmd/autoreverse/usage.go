@@ -1,8 +1,8 @@
 package main
 
 import (
-	//	"flag"
 	"fmt"
+	"strings"
 	"time"
 
 	flag "github.com/spf13/pflag"
@@ -197,7 +197,8 @@ present in the parent name servers.
 	}
 
 	if fs.NArg() > 0 {
-		fmt.Fprintln(log.Out(), "Error:Unexpected goop on command line:", fs.Args()[0])
+		fmt.Fprintf(log.Out(), "Error:Unexpected goop on command line: '%s'\n",
+			strings.Join(fs.Args(), " "))
 		return parseFailed
 	}
 
