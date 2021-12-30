@@ -46,7 +46,7 @@ func (t *autoReverse) parseOptions(args []string) parseResult {
 
 	fs := flag.NewFlagSet(name, flag.ContinueOnError)
 	fs.Usage = func() {
-		fmt.Fprintln(fs.Output(), "Consider '-h' for a command-line usage")
+		fmt.Fprintln(fs.Output(), "Consider '-h' for command-line usage")
 	}
 
 	fs.SetOutput(log.Out())
