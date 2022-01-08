@@ -142,8 +142,7 @@ func (t *PTRZone) loadFromAXFR(db *database.Database) error {
 	host := normalizeHostPort(t.host, t.port)
 	channel, err := transfer.In(req, host)
 	if err != nil {
-		return fmt.Errorf("Failed to fetch '%s' from %s:%s",
-			t.domain, host, err.Error())
+		return fmt.Errorf("Failed to fetch '%s' from %s:%w", t.domain, host, err)
 	}
 	t.dtm = time.Now() // Fake out a DTM for tests mostly
 
@@ -189,8 +188,7 @@ func (t *autoReverse) loadAllZones(pzs []*PTRZone, trigger string) bool {
 
 		if err != nil {
 			errorCount++
-			warning(fmt.Errorf("PTRZone load of %s failed: %s",
-				pz.url, err.Error()))
+			warning(fmt.Errorf("PTRZone load of %s failed: %w", pz.url, err))
 			continue
 		}
 

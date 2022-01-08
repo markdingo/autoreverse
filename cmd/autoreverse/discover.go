@@ -44,7 +44,7 @@ func (t *autoReverse) discoverForward(finder *delegation.Finder, domain string) 
 
 	fr, err := finder.FindAndProbe(pr)
 	if err != nil {
-		return fmt.Errorf("Forward:%s", err.Error())
+		return fmt.Errorf("Forward:%w", err)
 	}
 
 	log.Minor("Forward: Parent found: ", fr.Parent.Domain,
@@ -112,7 +112,7 @@ func (t *autoReverse) discoverReverse(finder *delegation.Finder, forward string,
 
 	fr, err := finder.FindAndProbe(pr)
 	if err != nil {
-		return fmt.Errorf("Reverse:%s", err.Error())
+		return fmt.Errorf("Reverse:%w", err)
 	}
 
 	log.Minor("Reverse: Parent found: ", fr.Parent.Domain,

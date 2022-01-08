@@ -16,7 +16,7 @@ func (t *autoReverse) ValidateCommandLineOptions() error {
 	for _, url := range t.cfg.PTRDeduceURLs { // Transfer -PTR-zones to config
 		pz, err := newPTRZoneFromURL(t.resolver, url)
 		if err != nil {
-			return fmt.Errorf("--PTR-deduce url.Parse failed:%s", err.Error())
+			return fmt.Errorf("--PTR-deduce url.Parse failed:%w", err)
 		}
 		t.cfg.PTRZones = append(t.cfg.PTRZones, pz)
 	}
@@ -103,14 +103,14 @@ func (t *autoReverse) ValidateCommandLineOptions() error {
 		t.cfg.passthru = normalizeHostPort(t.cfg.passthru, defaultService)
 		h, _, err := net.SplitHostPort(t.cfg.passthru)
 		if err != nil {
-			return fmt.Errorf("--passthru host %s invalid syntax:%s",
-				t.cfg.passthru, err.Error())
+			return fmt.Errorf("--passthru host %s invalid syntax:%w",
+				t.cfg.passthru, err)
 		}
 
 		addrs, err := t.resolver.LookupIPAddr(context.Background(), h)
 		if err != nil {
-			return fmt.Errorf("--passthru host %s Lookup error:%s",
-				t.cfg.passthru, err.Error())
+			return fmt.Errorf("--passthru host %s Lookup error:%w",
+				t.cfg.passthru, err)
 		}
 		if len(addrs) == 0 {
 			return fmt.Errorf("--passthru host %s has no IP address(es)",
@@ -137,7 +137,7 @@ func convertReverseCIDRs(option string, cidrs []string) (ipNets []*net.IPNet, er
 		var ipNet *net.IPNet
 		_, ipNet, err = net.ParseCIDR(cidr)
 		if err != nil {
-			err = fmt.Errorf("%s %s:%s", option, cidr, err.Error())
+			err = fmt.Errorf("%s %s:%w", option, cidr, err)
 			return
 		}
 		ones, bits := ipNet.Mask.Size()

@@ -45,24 +45,22 @@ func Constrain(userName, groupName, chrootDir string) error {
 	if len(userName) > 0 {
 		u, err := user.Lookup(userName)
 		if err != nil {
-			return fmt.Errorf(me+"User name lookup failed: %s", err.Error())
+			return fmt.Errorf(me+"User name lookup failed: %w", err)
 		}
 		uid, err = strconv.Atoi(u.Uid)
 		if err != nil {
-			return fmt.Errorf(me+"Could not convert UID %s to an int: %s",
-				u.Uid, err.Error())
+			return fmt.Errorf(me+"Could not convert UID %s to an int: %w", u.Uid, err)
 		}
 	}
 
 	if len(groupName) > 0 {
 		g, err := user.LookupGroup(groupName)
 		if err != nil {
-			return fmt.Errorf(me+"Group name lookup failed: %s", err.Error())
+			return fmt.Errorf(me+"Group name lookup failed: %w", err)
 		}
 		gid, err = strconv.Atoi(g.Gid)
 		if err != nil {
-			return fmt.Errorf(me+"Could not convert GID %s to an int: %s",
-				g.Gid, err.Error())
+			return fmt.Errorf(me+"Could not convert GID %s to an int: %w", g.Gid, err)
 		}
 	}
 
@@ -71,17 +69,17 @@ func Constrain(userName, groupName, chrootDir string) error {
 	if len(chrootDir) > 0 {
 		err := os.Chdir(chrootDir)
 		if err != nil {
-			return fmt.Errorf(me+"Could not cd to %s: %s", chrootDir, err.Error())
+			return fmt.Errorf(me+"Could not cd to %s: %w", chrootDir, err)
 		}
 
 		err = syscall.Chroot(chrootDir)
 		if err != nil {
-			return fmt.Errorf(me+"Could not chroot to %s: %s", chrootDir, err.Error())
+			return fmt.Errorf(me+"Could not chroot to %s: %w", chrootDir, err)
 		}
 
 		err = os.Chdir("/")
 		if err != nil {
-			return fmt.Errorf(me+"Could not cd to /: %s", err.Error())
+			return fmt.Errorf(me+"Could not cd to /: %w", err)
 		}
 	}
 
@@ -90,12 +88,11 @@ func Constrain(userName, groupName, chrootDir string) error {
 	if gid != -1 {
 		err := syscall.Setgroups([]int{})
 		if err != nil {
-			return fmt.Errorf(me+"Could not clear group list: %s", err.Error())
+			return fmt.Errorf(me+"Could not clear group list: %w", err)
 		}
 		err = syscall.Setgid(gid)
 		if err != nil {
-			return fmt.Errorf(me+"Could not setgid to %d/%s: %s",
-				gid, groupName, err.Error())
+			return fmt.Errorf(me+"Could not setgid to %d/%s: %w", gid, groupName, err)
 		}
 	}
 
@@ -104,8 +101,7 @@ func Constrain(userName, groupName, chrootDir string) error {
 	if uid != -1 {
 		err := syscall.Setuid(uid)
 		if err != nil {
-			return fmt.Errorf(me+"Could not setuid to %d/%s: %s",
-				uid, userName, err.Error())
+			return fmt.Errorf(me+"Could not setuid to %d/%s: %w", uid, userName, err)
 		}
 	}
 
