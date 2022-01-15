@@ -125,12 +125,13 @@ func (t *request) log() {
 		len(t.response.Answer), len(t.response.Ns), len(t.response.Extra), noteStr)
 }
 
-// setAuthority sets the authority - if any - for the current request.
+// setAuthority sets the authority for the current query if it's in-bailwick of any of our
+// domains.
 //
-// Have to serially search as it's a suffix match rather than an exact match. Possibly
+// The search is serially as it's a suffix match rather than an exact match. Possibly
 // could have some fancy suffix tree to mimic the DNS hierarchy, but in most cases the
-// number of authorities is likely to be 2 or 3, so a serial search probably beats a fancy
-// tree search any way.
+// number of authorities is likely to be just 2 or 3, so a serial search probably beats a
+// fancy tree search any way.
 //
 // Authorities have already been sorted by longest to shortest prefix so if there are some
 // zones more specific than others, they win.
