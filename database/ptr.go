@@ -23,7 +23,7 @@ func NewDatabase() *Database {
 // database. Returns true if the RR was an address record.
 func (t *Database) Add(rr dns.RR) bool {
 	ptr, ip := dnsutil.DeducePtr(rr)
-	if ptr == nil { // Must not be an legit RR
+	if ptr == nil { // Must not be a legit RR
 		return false
 	}
 	pmap := t.ptrMap[ip]
