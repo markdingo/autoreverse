@@ -1,4 +1,5 @@
 # autoreverse Change Log
+  * Have ConstraintReport() report the chroot path
   * Wrap all returned errors via fmt.Errorf() with original error
   * More sophisticated treatment of cookie timestamps
 ### v1.1.0 -- 2021-12-23

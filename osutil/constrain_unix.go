@@ -111,15 +111,23 @@ func Constrain(userName, groupName, chrootDir string) error {
 // ConstraintReport returns a printable string showing the uid/gid/cwd of the
 // process. Normally called after Constrain() to confirm that the process has reduced
 // privileges.
-func ConstraintReport() string {
+func ConstraintReport(chroot string) string {
 	uid := os.Getuid()
 	gid := os.Getgid()
-	cwd, _ := os.Getwd()
+	var cwdPath, cwdType string
+	if len(chroot) > 0 {
+		cwdPath = chroot
+		cwdType = "chroot"
+	} else {
+		cwdPath, _ = os.Getwd()
+		cwdType = "cwd"
+	}
 	gList, _ := os.Getgroups()
 	gStr := make([]string, 0, len(gList))
 	for _, g := range gList {
 		gStr = append(gStr, fmt.Sprintf("%d", g))
 	}
 
-	return fmt.Sprintf("uid=%d gid=%d (%s) cwd=%s", uid, gid, strings.Join(gStr, ","), cwd)
+	return fmt.Sprintf("uid=%d gid=%d (%s) %s=%s",
+		uid, gid, strings.Join(gStr, ","), cwdType, cwdPath)
 }

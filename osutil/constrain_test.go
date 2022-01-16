@@ -35,7 +35,7 @@ func TestConstrain(t *testing.T) {
 
 // This is a pretty lame test
 func TestReport(t *testing.T) {
-	rep := ConstraintReport()
+	rep := ConstraintReport("/tmp")
 	if !strings.Contains(rep, "uid=") {
 		t.Error("ConstraintReport is really bruk", rep)
 	}

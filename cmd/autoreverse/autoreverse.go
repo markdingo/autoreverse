@@ -132,7 +132,7 @@ func (t *autoReverse) Constrain() {
 		if err != nil {
 			fatal(err)
 		}
-		log.Major("Process Constraint: ", osutil.ConstraintReport())
+		log.Major("Process Constraint: ", osutil.ConstraintReport(t.cfg.chroot))
 	}
 }
 
