@@ -45,6 +45,7 @@ type generalStats struct {
 	authZoneAAAA int
 
 	nxDomain int
+	noError  int
 
 	passthruOut int
 	passthruIn  int
@@ -66,17 +67,18 @@ func (t *generalStats) add(from *generalStats) {
 	t.authZoneA += from.authZoneA
 	t.authZoneAAAA += from.authZoneAAAA
 	t.nxDomain += from.nxDomain
+	t.noError += from.noError
 
 	t.passthruOut += from.passthruOut
 	t.passthruIn += from.passthruIn
 }
 
 func (t *generalStats) String() string {
-	return fmt.Sprintf("q=%d fe=%d ch=%d nsid=%d cookie=%d/%d wc=%d noaz=%d az=%d/%d/%d/%d/%d nx=%d pass=%d/%d",
+	return fmt.Sprintf("q=%d fe=%d ch=%d nsid=%d cookie=%d/%d wc=%d noaz=%d az=%d/%d/%d/%d/%d nx=%d noE=%d pass=%d/%d",
 		t.queries, t.formatError, t.chaos, t.nsid, t.cookie, t.wrongCookie,
 		t.wrongClass, t.noAuthority,
 		t.authZoneANY, t.authZoneSOA, t.authZoneNS, t.authZoneA, t.authZoneAAAA,
-		t.nxDomain, t.passthruOut, t.passthruIn)
+		t.nxDomain, t.noError, t.passthruOut, t.passthruIn)
 }
 
 type serverStats struct {

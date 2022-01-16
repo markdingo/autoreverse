@@ -215,6 +215,12 @@ func (t *server) ServeDNS(wtr dns.ResponseWriter, query *dns.Msg) {
 		if t.cfg.synthesizeFlag && t.serveAAAA(wtr, req) {
 			return
 		}
+
+	default:
+		if req.qName == req.auth.Domain {
+			t.serveNoError(wtr, req)
+			return
+		}
 	}
 
 	// In our authority, but nothing we recognize - ergo NXDomain
@@ -232,6 +238,13 @@ func (t *server) serveNXDomain(wtr dns.ResponseWriter, req *request) {
 	req.response.Ns = append(req.response.Ns, &req.auth.SOA)
 	t.writeMsg(wtr, req)
 	req.stats.gen.nxDomain++
+}
+
+func (t *server) serveNoError(wtr dns.ResponseWriter, req *request) {
+	req.response.SetRcode(req.query, dns.RcodeSuccess)
+	req.response.Ns = append(req.response.Ns, &req.auth.SOA)
+	t.writeMsg(wtr, req)
+	req.stats.gen.noError++
 }
 
 // Expecting 192-0-2-1.Domain. Unlike ipv6, there is no compression of the IP address to

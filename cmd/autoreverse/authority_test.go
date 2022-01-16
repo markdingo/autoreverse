@@ -98,8 +98,8 @@ func TestAuthority(t *testing.T) {
 	if resp == nil {
 		t.Fatal("Setup failed")
 	}
-	if resp.Rcode != dns.RcodeNameError {
-		t.Error("Expected NXDomain for MX lookup. got",
+	if resp.Rcode != dns.RcodeSuccess {
+		t.Error("Expected NO Error for MX lookup. got",
 			dnsutil.RcodeToString(resp.Rcode), "\n", resp)
 	}
 
