@@ -1,25 +1,28 @@
 /*
 
-Package database provides a rudimentary PTR database for looking up PTRs by IP address.
+The database package provides a hierarchical DNS lookup mechanism. LookupRR() requires a
+class, type and FQDN and returns a set of RRs or an NXDOMAIN indication.
 
-It only has sufficient functionality to support autoreverse and is not intended as a
-general-purpose PTR database.
+Once the database has been "commited" the database effectively becomes read-only.
 
 Expected usage is:
 
     db := database.NewDatabase(config)
     for {
-        db.Add(dns.RR) // Where dns.RR should be an A/AAAA otherwise an error is returned
-    }
-    db.Count()
-    for {
-        db.Lookup(...)
+        db.AddRR(dns.RR)
     }
 
-The Database should be fully populated then only used for read access as their is no
-concurrency protection.
+    fmt.Println("Size", db.Count())
+    for {
+        rrset, nxDomain := db.LookupRR(...)
+    }
 
 database.Getter exists to assist with switching databases atomically.
+
+For compatibility purpose, the older ptr database interfaces are also supported in
+compat.go. These are Add() to add a PTR and Lookup() to look up PTRs given just an ip
+address. These functions will presumably disappear once autoreverse is fully migrated over
+to the newer interfaces.
 
 */
 package database
