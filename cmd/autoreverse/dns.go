@@ -95,8 +95,8 @@ func (t *server) ServeDNS(wtr dns.ResponseWriter, query *dns.Msg) {
 		}
 	}
 
-	req.ptrDB = t.dbGetter.Current() // Final setup for request prior to dispatching
-	req.mutables = t.getMutables()   // Get current mutables from server instance
+	req.db = t.dbGetter.Current()  // Final setup for request prior to dispatching
+	req.mutables = t.getMutables() // Get current mutables from server instance
 
 	// Pre-processing checks and setup is complete. The order of dispatching is: probe
 	// queries first followed by chaos followed by regular queries.
@@ -357,7 +357,7 @@ func (t *server) servePTR(wtr dns.ResponseWriter, req *request) bool {
 		reverseIPStr = strings.TrimSuffix(req.qName, dnsutil.V4Suffix)
 		ip, err = dnsutil.InvertPtrToIPv4(reverseIPStr)
 		if err == nil {
-			ar = req.ptrDB.Lookup(ip.String())
+			ar = req.db.Lookup(ip.String())
 		}
 
 	case strings.HasSuffix(req.qName, dnsutil.V6Suffix):
@@ -366,7 +366,7 @@ func (t *server) servePTR(wtr dns.ResponseWriter, req *request) bool {
 		reverseIPStr = strings.TrimSuffix(req.qName, dnsutil.V6Suffix)
 		ip, err = dnsutil.InvertPtrToIPv6(reverseIPStr)
 		if err == nil {
-			ar = req.ptrDB.Lookup(ip.String())
+			ar = req.db.Lookup(ip.String())
 		}
 
 	default: // Unexpected suffix - Dispatcher should not have let this in

@@ -21,7 +21,7 @@ import (
 // only ever accessed by a single go-routine and only lives for the life of a single DNS
 // query.
 type request struct {
-	ptrDB    *database.Database
+	db       *database.Database
 	query    *dns.Msg
 	response *dns.Msg
 	question dns.Question
