@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/markdingo/autoreverse/database"
+	"github.com/markdingo/autoreverse/delegation"
 	"github.com/markdingo/autoreverse/log"
 	"github.com/markdingo/autoreverse/mock"
 	mockDNS "github.com/markdingo/autoreverse/mock/dns"
@@ -59,6 +60,14 @@ func TestNewPTRZoneFromURL(t *testing.T) {
 	}
 }
 
+func setAuthorities(ar *autoReverse) {
+	ar.authorities.append(&delegation.Authority{Domain: "192.in-addr.arpa."})
+	ar.authorities.append(&delegation.Authority{Domain: "8.b.d.0.1.0.0.2.ip6.arpa."}) // ULA
+	ar.authorities.append(&delegation.Authority{Domain: "0.6.8.4.1.0.0.2.ip6.arpa."}) // Google
+	ar.authorities.append(&delegation.Authority{Domain: "8.8.in-addr.arpa."})
+	ar.authorities.sort()
+}
+
 func TestLoadFromFile(t *testing.T) {
 	log.SetOut(os.Stdout)
 	log.SetLevel(log.SilentLevel)
@@ -79,6 +88,7 @@ func TestLoadFromFile(t *testing.T) {
 	prefix := "file:///./testdata/loadzones/"
 	for ix, tc := range testCases {
 		ar := newAutoReverse(&config{TTLAsSecs: 61}, nil) // Needed by zone parser
+		setAuthorities(ar)
 		path := prefix + tc.zone
 		pz, err := newPTRZoneFromURL(resolver.NewResolver(), path)
 		if err != nil {
@@ -160,6 +170,7 @@ func TestLoadFromAXFR(t *testing.T) {
 	hTCP.SetResponse(&mockDNS.AXFRResponse{Rcode: -1})
 	for ix, tc := range testCases {
 		ar := newAutoReverse(&config{TTLAsSecs: 61}, nil) // Needed by zone parser
+		setAuthorities(ar)
 		url := fmt.Sprintf("axfr://%s/%s", serverAddr, tc.zone)
 		pz, err := newPTRZoneFromURL(resolver.NewResolver(), url)
 		if err != nil {
@@ -227,7 +238,7 @@ func TestLoadFromAXFR(t *testing.T) {
 }
 
 // Odds and sods that don't fit anywhere elses
-func TestOtherLoadErrors(t *testing.T) {
+func TestLoadOtherErrors(t *testing.T) {
 	out := &mock.IOWriter{}
 	log.SetOut(out)
 	ar := newAutoReverse(&config{TTLAsSecs: 61}, nil) // Needed by zone parser
@@ -326,6 +337,7 @@ func TestLoadFromHTTP(t *testing.T) {
 		for ix, tc := range testCases {
 			url := prefix + tc.suffix + "zone"
 			ar := newAutoReverse(&config{TTLAsSecs: 61}, nil) // Needed by zone parser
+			setAuthorities(ar)
 			pz, err := newPTRZoneFromURL(resolver.NewResolver(), url)
 			if err != nil {
 				t.Fatal("Setup error: all urls are meant to be legit", err)

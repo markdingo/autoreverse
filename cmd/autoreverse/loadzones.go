@@ -13,6 +13,7 @@ import (
 	"github.com/miekg/dns"
 
 	"github.com/markdingo/autoreverse/database"
+	"github.com/markdingo/autoreverse/dnsutil"
 	"github.com/markdingo/autoreverse/log"
 	"github.com/markdingo/autoreverse/resolver"
 )
@@ -84,7 +85,7 @@ func newPTRZoneFromURL(r resolver.Resolver, s string) (*PTRZone, error) {
 	return pz, nil
 }
 
-func (t *PTRZone) loadFromHTTP(db *database.Database, defaultTTL uint32) error {
+func (t *PTRZone) loadFromHTTP(db *database.Database, auths authorities, defaultTTL uint32) error {
 	resp, err := http.Get(t.url)
 	if err != nil {
 		return err
@@ -101,7 +102,7 @@ func (t *PTRZone) loadFromHTTP(db *database.Database, defaultTTL uint32) error {
 	parser.SetDefaultTTL(defaultTTL) // ZoneParser needs this in case $TTL is absent
 
 	for rr, ok := parser.Next(); ok; rr, ok = parser.Next() {
-		t.addRR(db, rr)
+		t.addRR(db, auths, rr)
 	}
 
 	return parser.Err() // Check for parser errors
@@ -109,7 +110,7 @@ func (t *PTRZone) loadFromHTTP(db *database.Database, defaultTTL uint32) error {
 
 // loadFromFile reads the zone from a file and populates the PTR database with deduced
 // and actual PTRs.
-func (t *PTRZone) loadFromFile(db *database.Database, defaultTTL uint32) error {
+func (t *PTRZone) loadFromFile(db *database.Database, auths authorities, defaultTTL uint32) error {
 	f, err := os.Open(t.path)
 	if err != nil {
 		return err
@@ -127,7 +128,7 @@ func (t *PTRZone) loadFromFile(db *database.Database, defaultTTL uint32) error {
 	parser.SetDefaultTTL(defaultTTL) // ZoneParser needs this in case $TTL is absent
 
 	for rr, ok := parser.Next(); ok; rr, ok = parser.Next() {
-		t.addRR(db, rr)
+		t.addRR(db, auths, rr)
 	}
 
 	return parser.Err() // Check for parser errors
@@ -135,7 +136,7 @@ func (t *PTRZone) loadFromFile(db *database.Database, defaultTTL uint32) error {
 
 // loadFromAXFR AXFRs the domain and populates the PTR database with deduced and
 // actual PTRs.
-func (t *PTRZone) loadFromAXFR(db *database.Database) error {
+func (t *PTRZone) loadFromAXFR(db *database.Database, auths authorities) error {
 	transfer := &dns.Transfer{}
 	req := new(dns.Msg)
 	req.SetAxfr(t.domain)
@@ -152,22 +153,16 @@ func (t *PTRZone) loadFromAXFR(db *database.Database) error {
 			return err
 		}
 		for _, rr := range env.RR {
-			t.addRR(db, rr)
+			t.addRR(db, auths, rr)
 		}
 	}
 
 	return nil
 }
 
-// loadAllZones populates the database with all forward names and PTRs found in the
-// external zones. Return the number of errors detected.
-//
-// No checking is made to ensure that the deduced PTRs are within any zones of authority
-// so this may load more PTRs than is strictly should, but it's simpler code this way. The
-// DNS query logic ensures that out-of-bailiwick queries never get to the point of a
-// database lookup, so by serendipity, we're safe being simple.
-//
-// Return true if load was successful
+// loadAllZones creates a new database and populates it from exteral zones, the Zones of
+// Authority and the CHAOS statics. If there are no errors, the new database replaces the
+// current one and true is returned.
 func (t *autoReverse) loadAllZones(pzs []*PTRZone, trigger string) bool {
 	newDB := database.NewDatabase()
 	var errorCount int
@@ -176,13 +171,13 @@ func (t *autoReverse) loadAllZones(pzs []*PTRZone, trigger string) bool {
 		var err error
 		switch pz.scheme {
 		case fileScheme:
-			err = pz.loadFromFile(newDB, t.cfg.TTLAsSecs)
+			err = pz.loadFromFile(newDB, t.authorities, t.cfg.TTLAsSecs)
 
 		case httpScheme:
-			err = pz.loadFromHTTP(newDB, t.cfg.TTLAsSecs)
+			err = pz.loadFromHTTP(newDB, t.authorities, t.cfg.TTLAsSecs)
 
 		case axfrScheme:
-			err = pz.loadFromAXFR(newDB)
+			err = pz.loadFromAXFR(newDB, t.authorities)
 		}
 
 		if err != nil {
@@ -191,8 +186,8 @@ func (t *autoReverse) loadAllZones(pzs []*PTRZone, trigger string) bool {
 			continue
 		}
 
-		log.Minorf("Loaded: %s Lines=%d Deduced PTRs=%d Serial=%d Refresh=%d",
-			pz.path, pz.lines, pz.added, pz.soa.Serial, pz.soa.Refresh)
+		log.Minorf("Loaded: %s Lines=%d Deduced PTRs=%d OOB=%d Serial=%d Refresh=%d",
+			pz.path, pz.lines, pz.added, pz.oob, pz.soa.Serial, pz.soa.Refresh)
 	}
 
 	if errorCount > 0 {
@@ -206,25 +201,39 @@ func (t *autoReverse) loadAllZones(pzs []*PTRZone, trigger string) bool {
 	return errorCount == 0
 }
 
-func (t *PTRZone) addRR(db *database.Database, rr dns.RR) {
+func (t *PTRZone) addRR(db *database.Database, auths authorities, rr dns.RR) {
 	t.lines++
 	switch rrt := rr.(type) {
 	case *dns.SOA:
 		if t.lines == 1 { // Only look for SOA on first line
 			t.soa = *rrt
 		}
-	case *dns.A, *dns.AAAA, *dns.PTR:
-		if db.Add(rr) {
+	case *dns.A, *dns.AAAA:
+		ptr, _ := dnsutil.DeducePtr(rr)
+		if ptr != nil {
+			t.addPTR(db, auths, ptr)
+		}
+	case *dns.PTR:
+		t.addPTR(db, auths, rrt)
+	case *dns.CNAME:
+		t.resolveAndAddCNAME(db, auths, rrt)
+	}
+}
+
+// Add the PTR into the database iff it's in-bailiwick
+func (t *PTRZone) addPTR(db *database.Database, auths authorities, ptr *dns.PTR) {
+	if auths.findInBailiwick(ptr.Hdr.Name) != nil {
+		if db.AddRR(ptr) {
 			t.added++
 		}
-	case *dns.CNAME:
-		t.resolveAndAddCNAME(db, rrt)
+	} else {
+		t.oob++
 	}
 }
 
 // Resolve the CNAME and add the address records into the database using the original RR
 // qName.
-func (t *PTRZone) resolveAndAddCNAME(db *database.Database, cname *dns.CNAME) {
+func (t *PTRZone) resolveAndAddCNAME(db *database.Database, auths authorities, cname *dns.CNAME) {
 	ips, err := t.resolver.LookupIPAddr(context.Background(), cname.Target)
 	if err != nil {
 		return // To bad, so sad. A dud CNAME is not our problem.
@@ -237,16 +246,20 @@ func (t *PTRZone) resolveAndAddCNAME(db *database.Database, cname *dns.CNAME) {
 			rr.Hdr.Class = cname.Hdr.Class
 			rr.Hdr.Rrtype = dns.TypeA
 			rr.A = ip4
-			db.Add(&rr)
-			t.added++
+			ptr, _ := dnsutil.DeducePtr(&rr)
+			if ptr != nil {
+				t.addPTR(db, auths, ptr)
+			}
 		} else if ip6 := ip.To16(); ip6 != nil {
 			var rr dns.AAAA
 			rr.Hdr.Name = cname.Hdr.Name
 			rr.Hdr.Class = cname.Hdr.Class
 			rr.Hdr.Rrtype = dns.TypeAAAA
 			rr.AAAA = ip6
-			db.Add(&rr)
-			t.added++
+			ptr, _ := dnsutil.DeducePtr(&rr)
+			if ptr != nil {
+				t.addPTR(db, auths, ptr)
+			}
 		}
 	}
 }

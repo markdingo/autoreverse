@@ -46,10 +46,10 @@ type PTRZone struct {
 	host, port, path, domain string            // Extracted from url.Parse()
 	scheme                   loadScheme
 
-	soa          dns.SOA   // Results of parsing
-	dtm          time.Time // Last modified or last loaded
-	loadTime     time.Time
-	lines, added int
+	soa               dns.SOA   // Results of parsing
+	dtm               time.Time // Last modified or last loaded
+	loadTime          time.Time
+	lines, added, oob int
 }
 
 // config defines the global configuration settings used by autoreverse. These setting
