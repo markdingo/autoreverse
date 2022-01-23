@@ -8,6 +8,9 @@ import (
 	"github.com/markdingo/autoreverse/dnsutil"
 )
 
+// authorities contains the Zones Of Authority which are primarily used to determine
+// whether queries are in-bailiwick or not. Once populated, sort() should be called to
+// ensure findInBailiwick() functions properly.
 type authorities struct {
 	slice []*delegation.Authority
 }
@@ -28,13 +31,13 @@ func (t *authorities) len() int {
 	return len(t.slice)
 }
 
-// sortAuthorities arranges the slice of authorities to be in most-labels-first order as
-// the dns query handler searches from first to last for a matching suffix. Thus this sort
-// ensure the most specific authority is seen first. If the label count is the same there
-// can't possibly be an overlap so it doesn't matter which order they come in, but this
-// sort makes it alphabetical just so it produces stable results that hopefully makes some
-// sense to external viewers.
-
+// sort arranges the slice of authorities to be in most-specific-first order to ensure
+// that findInBailiwick() returns the most specific zone.
+//
+// Label count is the primary sort key, with less labels coming earler. If the label
+// counts are equal there can't possibly be an overlap so it doesn't matter which order
+// they come in, but this function uses the alphabetical FQDN as the secondary sort key
+// which produces stable results and a visually convenient order for external viewers.
 func (t *authorities) sort() {
 	sort.Slice(t.slice,
 		func(i, j int) bool {
