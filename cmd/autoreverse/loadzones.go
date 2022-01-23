@@ -160,7 +160,50 @@ func (t *PTRZone) loadFromAXFR(db *database.Database, auths authorities) error {
 	return nil
 }
 
-// loadAllZones creates a new database and populates it from exteral zones, the Zones of
+// Load the ZOA address RRs into the candidate database if they are in-bailiwick.
+func (t *autoReverse) loadFromAuthorities(db *database.Database) (count int) {
+	for _, auth := range t.authorities.slice {
+		for _, rr := range auth.AAAA {
+			if t.findInBailiwick(rr.Header().Name) != nil {
+				db.AddRR(rr)
+				count++
+			}
+		}
+		for _, rr := range auth.A {
+			if t.findInBailiwick(rr.Header().Name) != nil {
+				db.AddRR(rr)
+				count++
+			}
+		}
+	}
+
+	return
+}
+
+func newTxt(qName, txt string, ttl uint32) (rr *dns.TXT) {
+	rr = new(dns.TXT)
+	rr.Hdr.Name = qName
+	rr.Hdr.Class = dns.ClassCHAOS
+	rr.Hdr.Rrtype = dns.TypeTXT
+	rr.Hdr.Ttl = ttl
+	rr.Txt = append(rr.Txt, txt)
+	return
+}
+
+// Load CHAOS RRs into candidate database. Caller has determined that chaos is enabled.
+func (t *autoReverse) loadFromChaos(db *database.Database) (count int) {
+	common1 := commonCHAOSPrefix + " " + t.cfg.projectURL
+	db.AddRR(newTxt("version.server.", common1, t.cfg.TTLAsSecs))
+	db.AddRR(newTxt("version.bind.", common1, t.cfg.TTLAsSecs))
+	db.AddRR(newTxt("authors.bind.", common1, t.cfg.TTLAsSecs))
+
+	db.AddRR(newTxt("hostname.bind.", t.cfg.nsid, t.cfg.TTLAsSecs))
+	db.AddRR(newTxt("id.server.", t.cfg.nsid, t.cfg.TTLAsSecs))
+
+	return 5
+}
+
+// loadAllZones creates a new database and populates it from exteral zones, the Zones Of
 // Authority and the CHAOS statics. If there are no errors, the new database replaces the
 // current one and true is returned.
 func (t *autoReverse) loadAllZones(pzs []*PTRZone, trigger string) bool {
@@ -190,15 +233,25 @@ func (t *autoReverse) loadAllZones(pzs []*PTRZone, trigger string) bool {
 			pz.path, pz.lines, pz.added, pz.oob, pz.soa.Serial, pz.soa.Refresh)
 	}
 
+	// Errors can only come from external loads, so deal with them now
 	if errorCount > 0 {
-		log.Major("LoadAllZones Errors: ", errorCount, " - load abandoned.")
-	} else {
-		log.Majorf("LoadAllZones Total Deduced PTRs: %d. Trigger: %s\n",
-			newDB.Count(), trigger)
-		t.dbGetter.Replace(newDB) // Only replace if no errors in any zone
+		log.Majorf("LoadAllZones Abandoned. Errors: %d. Trigger: %s\n",
+			errorCount, trigger)
+		return false
 	}
 
-	return errorCount == 0
+	c := t.loadFromAuthorities(newDB)
+	log.Minorf("Load Zones Of Authority: %d\n", c)
+	if t.cfg.chaosFlag {
+		c = t.loadFromChaos(newDB)
+		log.Minorf("Load Chaos: %d\n", c)
+	}
+
+	log.Majorf("LoadAllZones Database Entries: %d. Trigger: %s\n", newDB.Count(), trigger)
+
+	t.dbGetter.Replace(newDB) // Can replace since no errors occurred
+
+	return true
 }
 
 func (t *PTRZone) addRR(db *database.Database, auths authorities, rr dns.RR) {

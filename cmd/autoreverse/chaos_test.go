@@ -14,11 +14,11 @@ import (
 
 func TestChaos(t *testing.T) {
 	cfg := &config{logQueriesFlag: true, projectURL: "projectURL", nsid: "nsid1"}
-	montyResponse := commonCHAOSPrefix + " " + cfg.projectURL
+	expect := commonCHAOSPrefix + " " + cfg.projectURL
 	testCases := []struct{ in, out string }{
-		{"version.bind.", montyResponse},
-		{"version.server.", montyResponse},
-		{"authors.bind.", montyResponse},
+		{"version.bind.", expect},
+		{"version.server.", expect},
+		{"authors.bind.", expect},
 		{"hostname.bind.", "nsid1"},
 		{"id.server.", "nsid1"},
 		{"nope", ""},

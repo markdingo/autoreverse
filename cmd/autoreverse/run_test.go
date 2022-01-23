@@ -18,6 +18,8 @@ func TestRun(t *testing.T) {
 		"Local Forward Zone",
 		"IN/SOA",
 		"Zone Authority",
+		"Load Zones Of Authority",
+		"Load Chaos",
 		programName,
 		"Ready",
 		"Stats: Uptime",
@@ -30,7 +32,7 @@ func TestRun(t *testing.T) {
 		"log-queries=true",
 		"log-queries=false",
 		"PTR-deduce reload",
-		"LoadAllZones Total Deduced PTRs",
+		"LoadAllZones Database Entries",
 		"initiates shutdown",
 		"All Listen servers stopped",
 	}
@@ -41,6 +43,7 @@ func TestRun(t *testing.T) {
 
 	cfg := newConfig()
 	cfg.TTLAsSecs = 60
+	cfg.chaosFlag = true
 	cfg.reportInterval = time.Second * 3
 	ar := newAutoReverse(cfg, nil)
 	ar.generateLocalForward("example.net.")
