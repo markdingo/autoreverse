@@ -85,7 +85,7 @@ func main() {
 	// Zones of Authority are set - ensure correct search order. This should rarely if
 	// ever matter, but it's possible that one authority might legitimately be a
 	// superset of another. The sort ensures that more specific zone comes first.
-	ar.authorities = sortAuthorities(ar.authorities)
+	ar.authorities.sort()
 
 	ar.Constrain() // setuid/setgid/chroot
 

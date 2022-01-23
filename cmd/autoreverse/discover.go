@@ -81,9 +81,9 @@ func (t *autoReverse) discoverAllReverses(finder *delegation.Finder) error {
 	// Authorities from reverse discoveries to perturb later discoveries so reverses
 	// are never added to mutables while in discovery mode - they are all added by
 	// Run() post-discovery.
-	fwdOnly := make([]*delegation.Authority, 0)
+	var fwdOnly authorities
 	if t.forwardAuthority != nil { // This must always be true I think
-		fwdOnly = append(fwdOnly, t.forwardAuthority)
+		fwdOnly.append(t.forwardAuthority)
 	}
 	for _, srv := range t.servers {
 		srv.setMutables(t.forward, nil, fwdOnly)

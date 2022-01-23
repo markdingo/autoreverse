@@ -14,7 +14,7 @@ import (
 )
 
 // Test that all of the Zone-Of-Authority resources are correctly looked up
-func TestAuthority(t *testing.T) {
+func TestAuthorityLookups(t *testing.T) {
 	soaTime = time.Unix(1357997531, 0) // Override time.Now() so SOA.Serial is a known value
 
 	// Create out-of-bailiwick and in-bailiwick name servers
@@ -38,7 +38,7 @@ func TestAuthority(t *testing.T) {
 	}
 
 	server := newServer(&config{}, database.NewGetter(), resolver.NewResolver(), "", "") // Make a skeletal server
-	server.authorities = append(server.authorities, auth)
+	server.authorities.append(auth)
 	wtr := &mock.ResponseWriter{}
 
 	wtr.Reset()
@@ -150,7 +150,7 @@ func TestAuthority(t *testing.T) {
 	// Test with a minimalist Authority
 	auth = &delegation.Authority{Domain: "example.net.", NS: []dns.RR{ns2}}
 	ar.synthesizeSOA(auth, "example.net")
-	server.authorities[0] = auth
+	server.authorities.slice[0] = auth // Looking inside is a bit of a hack for this test
 
 	q = setQuestion(dns.ClassINET, dns.TypeSOA, "example.net.")
 	server.ServeDNS(wtr, q)

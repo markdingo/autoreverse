@@ -159,14 +159,13 @@ func (t *PTRZone) loadFromAXFR(db *database.Database) error {
 	return nil
 }
 
-// loadAllZones populates the reverse PTR database with all forward names and PTRs found
-// in the external zones. Return the number of errors detected.
+// loadAllZones populates the database with all forward names and PTRs found in the
+// external zones. Return the number of errors detected.
 //
 // No checking is made to ensure that the deduced PTRs are within any zones of authority
-// so this may load more PTRs than it strictly should, but it's simpler code this way. The
-// DNS query logic ensures that out-of-bailiwick queries never get to the point of looking
-// up the database, so by serendipity, we're safe being simple.
-// about load ordering.
+// so this may load more PTRs than is strictly should, but it's simpler code this way. The
+// DNS query logic ensures that out-of-bailiwick queries never get to the point of a
+// database lookup, so by serendipity, we're safe being simple.
 //
 // Return true if load was successful
 func (t *autoReverse) loadAllZones(pzs []*PTRZone, trigger string) bool {

@@ -11,11 +11,11 @@ import (
 func TestGenerateLocalForward(t *testing.T) {
 	ar := newAutoReverse(nil, nil)
 	ar.generateLocalForward("example.net.")
-	if len(ar.authorities) != 1 {
-		t.Error("GLF should have added authority", len(ar.authorities))
+	if ar.authorities.len() != 1 {
+		t.Error("GLF should have added authority", ar.authorities.len())
 	}
 
-	auth := ar.authorities[0]
+	auth := ar.authorities.slice[0]
 	if auth.Domain != "example.net." {
 		t.Error("Auth was net set", auth)
 	}
@@ -49,11 +49,11 @@ func TestGenerateLocalReverse(t *testing.T) {
 		t.Error("Unexpected v4 error", ipNet, err)
 	}
 
-	if len(ar.authorities) != 3 { // Forward + two reverses
-		t.Error("GLR should have added authority", len(ar.authorities))
+	if ar.authorities.len() != 3 { // Forward + two reverses
+		t.Error("GLR should have added authority", ar.authorities.len())
 	}
 
-	auth := ar.authorities[1]
+	auth := ar.authorities.slice[1]
 	exp := "0.1.0.0.2.ip6.arpa."
 	if auth.Domain != exp {
 		t.Error("Wrong v6 reverse. Exp", exp, "Got", auth.Domain)
@@ -64,7 +64,7 @@ func TestGenerateLocalReverse(t *testing.T) {
 		t.Error("Reverse NS was not transmogrified", auth.NS[0].Header().Name)
 	}
 
-	auth = ar.authorities[2]
+	auth = ar.authorities.slice[2]
 	exp = "0.192.in-addr.arpa."
 	if auth.Domain != exp {
 		t.Error("Wrong v4 reverse. Exp", exp, "Got", auth.Domain)

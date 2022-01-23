@@ -15,16 +15,16 @@ import (
 // processing code, thus they need mutex protection. The rule is that mutables must only
 // ever be accessed by setMutable() and getMutable().
 type mutables struct {
-	ptrSuffix   string                  // String to append to synthesized PTR names
-	probe       delegation.Probe        // Current probe if any
-	authorities []*delegation.Authority // Forward + all reverse zones of authority
+	ptrSuffix   string           // String to append to synthesized PTR names
+	probe       delegation.Probe // Current probe if any
+	authorities                  // Forward + all reverse zones of authority
 }
 
 // Set mutables under protection of a mutex. This is the only way they should be set.
-func (t *server) setMutables(ps string, pr delegation.Probe, al []*delegation.Authority) {
+func (t *server) setMutables(ps string, pr delegation.Probe, auths authorities) {
 	t.mutablesMu.Lock()
 	t.ptrSuffix = ps
-	t.authorities = al
+	t.authorities = auths
 	t.probe = pr
 	t.mutablesMu.Unlock()
 }

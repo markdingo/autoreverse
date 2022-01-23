@@ -45,9 +45,9 @@ func TestDiscoverForward(t *testing.T) {
 	if mutsBefore.ptrSuffix == mutsAfter.ptrSuffix {
 		t.Log("Mutables didn't change", mutsBefore.ptrSuffix, mutsAfter.ptrSuffix)
 	}
-	if len(mutsBefore.authorities) == len(mutsAfter.authorities) {
+	if mutsBefore.authorities.len() == mutsAfter.authorities.len() {
 		t.Log("Mutables didn't change",
-			len(mutsBefore.authorities), len(mutsAfter.authorities))
+			mutsBefore.authorities.len(), mutsAfter.authorities.len())
 	}
 
 	// Forward Error paths
@@ -126,13 +126,13 @@ func TestDiscoverReverseGood(t *testing.T) {
 	if mutsBefore.ptrSuffix == mutsAfter.ptrSuffix {
 		t.Log("Mutables didn't change", mutsBefore.ptrSuffix, mutsAfter.ptrSuffix)
 	}
-	if len(mutsBefore.authorities) == len(mutsAfter.authorities) {
+	if mutsBefore.authorities.len() == mutsAfter.authorities.len() {
 		t.Log("Mutables didn't change",
-			len(mutsBefore.authorities), len(mutsAfter.authorities))
+			mutsBefore.authorities.len(), mutsAfter.authorities.len())
 	}
 
-	if len(ar.authorities) != 3 {
-		t.Error("Authority count wrong. Want 3, got", len(ar.authorities))
+	if ar.authorities.len() != 3 {
+		t.Error("Authority count wrong. Want 3, got", ar.authorities.len())
 		t.Log(out.String())
 	}
 }

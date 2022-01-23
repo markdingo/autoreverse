@@ -126,20 +126,7 @@ func (t *request) log() {
 }
 
 // setAuthority sets the authority for the current query if it's in-bailwick of any of our
-// domains.
-//
-// The search is serially as it's a suffix match rather than an exact match. Possibly
-// could have some fancy suffix tree to mimic the DNS hierarchy, but in most cases the
-// number of authorities is likely to be just 2 or 3, so a serial search probably beats a
-// fancy tree search any way.
-//
-// Authorities have already been sorted by longest to shortest prefix so if there are some
-// zones more specific than others, they win.
+// Authority domains.
 func (t *request) setAuthority() {
-	for _, auth := range t.authorities {
-		if dnsutil.InBailiwick(t.qName, auth.Domain) {
-			t.auth = auth
-			return
-		}
-	}
+	t.auth = t.authorities.findInBailiwick(t.qName)
 }

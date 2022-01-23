@@ -79,8 +79,8 @@ func TestProbe(t *testing.T) {
 	rand.Seed(0) // Make probe generation predictable
 	a1 := &delegation.Authority{Domain: "fozzy.example.net."}
 	pr := delegation.NewForwardProbe(a1.Domain)
-	auths := make([]*delegation.Authority, 0, 1)
-	auths = append(auths, a1)
+	var auths authorities
+	auths.append(a1)
 	server.setMutables("", pr, auths)
 
 	// First send a bogus query in probe mode
@@ -193,7 +193,11 @@ func TestServeBadPTR(t *testing.T) {
 	a2 := &delegation.Authority{Domain: "f.f.f.f.d.2.d.f.ip6.arpa."}
 	a3 := &delegation.Authority{Domain: "2.0.192.in-addr.arpa."}
 
-	server.setMutables("", nil, []*delegation.Authority{a1, a2, a3})
+	var auths authorities
+	auths.append(a1)
+	auths.append(a2)
+	auths.append(a3)
+	server.setMutables("", nil, auths)
 
 	query := setQuestion(dns.ClassINET, dns.TypePTR, "0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.f.f.f.f.d.2.d.f.ip6.arpa.")
 	server.ServeDNS(wtr, query)
@@ -252,8 +256,8 @@ func TestMisc(t *testing.T) {
 	server := newServer(cfg, database.NewGetter(), res, "", "")
 
 	a1 := &delegation.Authority{Domain: "misc.example.net."}
-	auths := make([]*delegation.Authority, 0, 1)
-	auths = append(auths, a1)
+	var auths authorities
+	auths.append(a1)
 	server.setMutables("", nil, auths)
 
 	query := setQuestion(dns.ClassCHAOS, dns.TypeTXT, "version.bind.")
@@ -375,8 +379,12 @@ func TestGoodAnswers(t *testing.T) {
 	a1 := &delegation.Authority{Domain: cfg.delegatedForward}
 	a2 := &delegation.Authority{Domain: "f.f.f.f.d.2.d.f.ip6.arpa."}
 	a3 := &delegation.Authority{Domain: "2.0.192.in-addr.arpa."}
+	var auths authorities
+	auths.append(a1)
+	auths.append(a2)
+	auths.append(a3)
 
-	server.setMutables("a.zig.", nil, []*delegation.Authority{a1, a2, a3})
+	server.setMutables("a.zig.", nil, auths)
 
 	for ix, tc := range testCases {
 		query := setQuestion(dns.ClassINET, tc.qType, tc.qName)
@@ -440,7 +448,8 @@ func TestCookies(t *testing.T) {
 	res := resolver.NewResolver()
 	cfg := &config{logQueriesFlag: true, chaosFlag: true}
 	server := newServer(cfg, database.NewGetter(), res, "", "")
-	server.setMutables("", nil, []*delegation.Authority{})
+	var auths authorities
+	server.setMutables("", nil, auths)
 
 	for ix, tc := range testCases {
 		query := new(dns.Msg)

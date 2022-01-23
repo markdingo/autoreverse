@@ -40,7 +40,7 @@ type autoReverse struct {
 	delegatedReverses []*net.IPNet
 	localReverses     []*net.IPNet
 
-	authorities []*delegation.Authority // Contains all authorities, including forward
+	authorities // Contains all authorities, including forward
 }
 
 func newAutoReverse(cfg *config, r resolver.Resolver) *autoReverse {
@@ -70,14 +70,7 @@ func (t *autoReverse) Done() <-chan struct{} {
 
 // Return true if added. Return false if duplicate.
 func (t *autoReverse) addAuthority(add *delegation.Authority) bool {
-	for _, ta := range t.authorities {
-		if add.Domain == ta.Domain {
-			return false
-		}
-	}
-	t.authorities = append(t.authorities, add)
-
-	return true
+	return t.authorities.append(add)
 }
 
 // Open Listen sockets and start servers. Does not return until all servers have started

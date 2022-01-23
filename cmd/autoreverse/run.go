@@ -21,7 +21,7 @@ func (t *autoReverse) Run() {
 	var signal os.Signal
 	osutil.SignalNotify(t.sig) // Register interest in signals
 
-	for _, a := range t.authorities {
+	for _, a := range t.authorities.slice {
 		log.Major("Zone Authority: ", a.Domain)
 	}
 
