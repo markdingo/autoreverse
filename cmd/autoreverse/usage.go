@@ -112,7 +112,7 @@ the SOA is mostly empty. Cannot be used when --forward is set.
 	fs.StringVar(&t.cfg.nsid, "NSID", "",
 		"Respond to EDNS NSID sub-opt with the specified string.")
 	fs.StringVar(&t.cfg.passthru, "passthru", "",
-		"DNS server to pass thru INET queries which are out-of-bailiwick.")
+		"DNS server to pass thru queries which are out-of-bailiwick.")
 	fs.StringVar(&t.cfg.user, "user", "", "Reduce privileges with setuid() after --listen.")
 
 	// config String Arrays
