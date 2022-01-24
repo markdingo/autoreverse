@@ -1,4 +1,4 @@
-.Dd December 23, 2021
+.Dd January 25, 2022
 .Dt AUTOREVERSE 8
 .Os
 .Sh NAME
@@ -501,8 +501,7 @@ are placed in the response within size limits.
 The default is
 .Sy 5 .
 .It Fl -passthru Ar auth-server
-Proxy out-of-bailiwick Class
-.Ql IN
+Proxy out-of-bailiwick
 queries to the
 .Ar auth-server .
 .Pp
@@ -511,8 +510,7 @@ queries to the
 Normally out-of-bailiwick queries generated a
 .Sy REFUSED
 DNS response.
-However, with this option set, out-of-bailiwick ClassINET queries are proxied unmodified
-to the
+However, with this option set, out-of-bailiwick queries are proxied unmodified to the
 .Ar auth-server
 using the same network type the query came in, i.e.
 .Sy UDP
@@ -822,7 +820,7 @@ the NSID option.
 Finally, out-of-bailiwick queries are passed thru to a name server presumed to be
 listening on 127.0.0.1 which allows
 .Nm
-to proxy or answer all inbound Class IN DNS queries.
+to proxy or answer all inbound queries.
 .Sh PERFORMANCE
 While
 .Nm
