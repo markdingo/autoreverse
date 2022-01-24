@@ -194,5 +194,5 @@ the project home page. This package can only improve with your feedback.
 
 ### Copyright and License
 
-`autoreverse` is Copyright :copyright: 2021 Mark Delany. This software is licensed under
+`autoreverse` is Copyright :copyright: 2021, 2022 Mark Delany. This software is licensed under
 the BSD 2-Clause "Simplified" License.
