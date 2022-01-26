@@ -30,8 +30,8 @@ func DeducePtr(rr dns.RR) (ptr *dns.PTR, key string) {
 		key = rrt.AAAA.String()
 
 	case *dns.PTR:
-		ip, err := InvertPtrToIP(rrt.Hdr.Name) // See if it's well-formed first
-		if err == nil {
+		ip, truncated, err := InvertPtrToIP(rrt.Hdr.Name) // See if it's well-formed first
+		if err == nil && !truncated {
 			ptr = rrt
 			key = ip.String()
 		}

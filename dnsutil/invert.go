@@ -8,8 +8,9 @@ import (
 
 // InvertPtrToIP extracts and inverts the purported IP address from a reverse qName. Like
 // any name in the DNS, a reverse qName does not *have* to represent an IP address, but
-// this code ignores all else. Return an error if an IP address cannot be extracted.
-func InvertPtrToIP(qName string) (net.IP, error) {
+// this code ignores all else. Return an error if an IP address cannot be extracted. The
+// return bool is true if the IP address is as valid as far as it goes, but is truncated.
+func InvertPtrToIP(qName string) (net.IP, bool, error) {
 	if strings.HasSuffix(qName, V4Suffix) {
 		return InvertPtrToIPv4(strings.TrimSuffix(qName, V4Suffix))
 	}
@@ -17,79 +18,86 @@ func InvertPtrToIP(qName string) (net.IP, error) {
 		return InvertPtrToIPv6(strings.TrimSuffix(qName, V6Suffix))
 	}
 
-	return nil, fmt.Errorf("Unknown reverse suffix '%s'", qName)
+	return nil, false, fmt.Errorf("Unknown reverse suffix '%s'", qName)
 }
 
 // InvertPtrToIPv4 takes the first part of the reverse qName from the ipv4 zone and
-// converts it back into an ipv4 Address, if possible. As a reminder, a dig -x 1.2.3.4
-// results in a qName of 4.3.2.1.in-addr.arpa. The suffix is removed by the caller leaving
-// just 4.3.2.1. There are of course no guarantees that this string is in reversed IP
-// address format as a rogue query can come in directly with anything in qName, thus all
-// the checking and potential error return if the string doesn't parse.
-func InvertPtrToIPv4(qName string) (net.IP, error) {
+// converts it back into an ipv4 Address, if possible. As a reminder, a dig -x 192.168.1.2
+// results in a qName of 2.1.168.192.in-addr.arpa. The suffix is removed by the caller
+// leaving just 2.1.168.192. There are of course no guarantees that this string is in
+// reversed IP address format as a rogue query can come in directly with anything in
+// qName, thus all the checking and potential error return if the string doesn't parse.
+//
+// The returned bool is true if the IP address is valid as far as it goes, but is
+// truncated, e.g. 1.168.192.in-addr.arpa. The reason for converting truncated IPs is so
+// that the caller can distinguish between a malformed address and a truncated one as the
+// former results in an NXDomain and the latter results in a NoError.
+func InvertPtrToIPv4(qName string) (net.IP, bool, error) {
+	if len(qName) == 0 {
+		return nil, false, fmt.Errorf("Empty reverse ipv4 address qName")
+	}
+	var octets [4]byte
 	reverse := strings.SplitN(qName, ".", 4)
-	if len(reverse) != 4 {
-		return nil, fmt.Errorf("Malformed reverse ipv4 address '%s'", qName)
+	ix := 4 - len(reverse)
+	for _, octet := range reverse {
+		v := convertDecimalOctet(octet)
+		if v == -1 {
+			return nil, false, fmt.Errorf("Malformed reverse ipv4 address '%s'", qName)
+		}
+		octets[ix] = byte(v)
+		ix++
 	}
+	ip := net.IPv4(octets[3], octets[2], octets[1], octets[0])
 
-	a := convertDecimalOctet(reverse[3])
-	b := convertDecimalOctet(reverse[2])
-	c := convertDecimalOctet(reverse[1])
-	d := convertDecimalOctet(reverse[0])
-	if a == -1 || b == -1 || c == -1 || d == -1 {
-		return nil, fmt.Errorf("Malformed reverse ipv4 address '%s'", qName)
-	}
-
-	ip := net.IPv4(byte(a), byte(b), byte(c), byte(d))
-
-	return ip, nil
+	return ip, len(reverse) < 4, nil
 }
 
 // InvertPtrToIPv6 takes the first part of the reverse query name, and converts it back
-// into an ipv6 Address, if possible. See discussion of InvertPtrToIPv4.
-func InvertPtrToIPv6(qName string) (net.IP, error) {
-	reverse := strings.SplitN(qName, ".", 32)
-	if len(reverse) != 32 {
-		return nil, fmt.Errorf("Malformed reverse ipv6 address '%s'", qName)
+// into an ipv6 address, if possible. Expected input looks something like:
+// 3.f.6.d.4.d.3.b.c.4.3.0.1.3.8.0.0.0.0.0.0.0.0.0.0.0.0.0.0.8.e.f.ip6.arpa less the
+// "ip6.arpa" suffix.
+//
+// The returned bool is true if the IP address is valid as far as it goes, but is
+// truncated, e.g. 0.8.e.f.ip6.arpa returns an ipv6 address of fe80::0 with
+// truncated=true. See the discussion of InvertPtrToIPv4.
+func InvertPtrToIPv6(qName string) (net.IP, bool, error) {
+	if len(qName) == 0 {
+		return nil, false, fmt.Errorf("Empty reverse ipv6 address qName")
 	}
+	var hex [32]byte
+	reverse := strings.SplitN(qName, ".", 32)
+	ix := 32 - len(reverse)
+	for _, hStr := range reverse {
+		if len(hStr) != 1 {
+			return nil, false, fmt.Errorf("Malformed reverse ipv6 address '%s'", qName)
+		}
+		h := hStr[0]
+		switch {
+		case h >= '0' && h <= '9':
+			hex[ix] = h - '0'
+		case h >= 'a' && h <= 'f':
+			hex[ix] = h - 'a' + 10
+		case h >= 'A' && h <= 'F':
+			hex[ix] = h - 'A' + 10
+		default:
+			return nil, false, fmt.Errorf("Malformed reverse ipv6 address '%s'", qName)
+		}
+		ix++
+	}
+
 	ip := make(net.IP, net.IPv6len) // Create an allocated net.IP
-	ix := 15
+	ix = 15
 	for rx := 0; rx < 32; rx += 2 {
-		if len(reverse[rx]) != 1 || len(reverse[rx+1]) != 1 {
-			return nil, fmt.Errorf("Malformed reverse ipv6 address '%s'", qName)
-		}
-
-		c2 := reverse[rx][0]
-		c1 := reverse[rx+1][0]
-		var i1, i2 byte
-		switch {
-		case c1 >= '0' && c1 <= '9':
-			i1 = c1 - '0'
-		case c1 >= 'a' && c1 <= 'f':
-			i1 = c1 - 'a' + 10
-		default:
-			return nil, fmt.Errorf("Malformed reverse ipv6 address '%s'", qName)
-		}
-
-		switch {
-		case c2 >= '0' && c2 <= '9':
-			i2 = c2 - '0'
-		case c2 >= 'a' && c2 <= 'f':
-			i2 = c2 - 'a' + 10
-		default:
-			return nil, fmt.Errorf("Malformed reverse ipv6 address '%s'", qName)
-		}
-
-		ip[ix] = i1<<4 + i2
+		ip[ix] = hex[rx+1]<<4 + hex[rx]
 		ix--
 	}
 
-	return ip, nil
+	return ip, len(reverse) < 32, nil
 }
 
-// convertDecimalOctet converts an ipv4 decimal octet to an int. But it's tough.  Return
-// -1 if conversion fails. No leading zeroes, range 0-255, no non-digit characters,
-// terminators or otherwise.
+// convertDecimalOctet strictly converts an ipv4 decimal octet to an int. Return -1 if
+// conversion fails. Rules: no leading zeroes, numeric range 0-255, lenfth 1-3 bytes and
+// no non-digit characters.
 func convertDecimalOctet(s string) (ret int) {
 	if len(s) == 0 || len(s) > 3 {
 		return -1
