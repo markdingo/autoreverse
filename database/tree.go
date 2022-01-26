@@ -152,6 +152,7 @@ func (t *Database) Count() int {
 }
 
 func (t *Database) Dump() {
+	fmt.Println("Database Dump", t.count)
 	for ct, parent := range t.cm {
 		t.dumpChildren(dns.ClassToString[ct]+" ", "", parent)
 	}
