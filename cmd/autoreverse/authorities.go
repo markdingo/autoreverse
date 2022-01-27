@@ -1,22 +1,65 @@
 package main
 
 import (
+	"net"
 	"sort"
 	"strings"
+	"time"
+
+	"github.com/miekg/dns"
 
 	"github.com/markdingo/autoreverse/delegation"
 	"github.com/markdingo/autoreverse/dnsutil"
 )
 
+type authority struct {
+	delegation.Authority
+	forward bool // Whether a forward or reverse authority
+	cidr    *net.IPNet
+}
+
+func newAuthority(da *delegation.Authority, forward bool) *authority {
+	auth := &authority{}
+	auth.Authority = *da
+	auth.forward = forward
+
+	return auth
+}
+
+var soaTime = time.Now() // Set here so tests can over-ride
+
+func (t *authority) synthesizeSOA(mboxDomain string, TTLAsSecs uint32) {
+	t.SOA.Hdr.Name = t.Domain
+	t.SOA.Hdr.Class = dns.ClassINET
+	t.SOA.Hdr.Rrtype = dns.TypeSOA
+	t.SOA.Hdr.Ttl = TTLAsSecs
+	if len(t.NS) > 0 { // Zero is possible for locals
+		t.SOA.Ns = t.NS[0].(*dns.NS).Ns
+	} else {
+		t.SOA.Ns = t.Domain
+	}
+
+	t.SOA.Mbox = "hostmaster." + mboxDomain // Why not?
+	t.SOA.Serial = uint32(soaTime.Unix())
+
+	t.SOA.Refresh = 110040 // None of these timers really have much meaning
+	t.SOA.Retry = 110080   // but we have to populate them with something so give them
+	t.SOA.Expire = 28      // signature values which make "von Fastrand" proud.
+	t.SOA.Minttl = 9030    // Hit me up if you recognize all of these numbers.
+}
+
 // authorities contains the Zones Of Authority which are primarily used to determine
 // whether queries are in-bailiwick or not. Once populated, sort() should be called to
 // ensure findInBailiwick() functions properly.
 type authorities struct {
-	slice []*delegation.Authority
+	slice []*authority
 }
 
 // Only append if unique. Return true if appended.
-func (t *authorities) append(add *delegation.Authority) bool {
+func (t *authorities) append(add *authority) bool {
+	if !add.forward && add.cidr == nil {
+		panic("Attempt to add reverse authority with no CIDR")
+	}
 	for _, auth := range t.slice {
 		if add.Domain == auth.Domain {
 			return false
@@ -54,7 +97,7 @@ func (t *authorities) sort() {
 	)
 }
 
-// findInBailiwick returns the matching delegation.Authority for the qName or nil.
+// findInBailiwick returns the matching authority for the qName or nil.
 //
 // The search is serial as it's a suffix match rather than an exact match. Possibly could
 // have some fancy suffix tree to mimic the DNS hierarchy, but in most cases the number of
@@ -63,9 +106,21 @@ func (t *authorities) sort() {
 //
 // Authorities are assumed to have already been sorted by sortAuthorities which ensures
 // this function will return the longest prefix/most-specific match.
-func (t *authorities) findInBailiwick(qName string) *delegation.Authority {
+func (t *authorities) findInBailiwick(qName string) *authority {
 	for _, auth := range t.slice {
 		if dnsutil.InBailiwick(qName, auth.Domain) {
+			return auth
+		}
+	}
+
+	return nil
+}
+
+// findIPInBailiwick finds the matching reverse authority which contains the
+// IP. Return nil if not found.
+func (t *authorities) findIPInBailiwick(ip net.IP) *authority {
+	for _, auth := range t.slice {
+		if !auth.forward && auth.cidr.Contains(ip) {
 			return auth
 		}
 	}

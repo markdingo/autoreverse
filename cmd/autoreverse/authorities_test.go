@@ -1,9 +1,8 @@
 package main
 
 import (
+	"net"
 	"testing"
-
-	"github.com/markdingo/autoreverse/delegation"
 )
 
 func TestAuthoritiesSort(t *testing.T) {
@@ -43,7 +42,10 @@ func TestAuthoritiesSort(t *testing.T) {
 
 	var auths authorities
 	for _, d := range input {
-		auths.append(&delegation.Authority{Domain: d})
+		a := &authority{}
+		a.Domain = d
+		_, a.cidr, _ = net.ParseCIDR("192.0.2.0/24") // Just to make append() happy
+		auths.append(a)
 	}
 	b4 := auths.len()
 	auths.sort()
@@ -61,12 +63,19 @@ func TestAuthoritiesSort(t *testing.T) {
 
 func TestAuthoritiesFindInBailiwick(t *testing.T) {
 	var auths authorities
+	for _, d := range []string{"a.example.net.", "b.a.example.net.", "c.b.a.example.net."} {
+		a := &authority{forward: true}
+		a.Domain = d
+		auths.append(a)
+	}
 
-	auths.append(&delegation.Authority{Domain: "a.example.net."})
-	auths.append(&delegation.Authority{Domain: "b.a.example.net."})
-	auths.append(&delegation.Authority{Domain: "c.b.a.example.net."})
-	auths.append(&delegation.Authority{Domain: "0.8.b.d.0.1.0.0.2.ip6.arpa."})
-	auths.append(&delegation.Authority{Domain: "1.0.0.2.ip6.arpa."})
+	for _, d := range []string{"0.8.b.d.0.1.0.0.2.ip6.arpa.", "1.0.0.2.ip6.arpa."} {
+		a := &authority{}
+		a.Domain = d
+		a.cidr = &net.IPNet{} // Filler to make append() happy
+		auths.append(a)
+	}
+
 	auths.sort()
 
 	type testCase struct {

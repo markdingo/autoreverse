@@ -7,10 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/miekg/dns"
-
 	"github.com/markdingo/autoreverse/database"
-	"github.com/markdingo/autoreverse/delegation"
 	"github.com/markdingo/autoreverse/dnsutil"
 	"github.com/markdingo/autoreverse/log"
 	"github.com/markdingo/autoreverse/osutil"
@@ -33,9 +30,9 @@ type autoReverse struct {
 	servers []*server
 
 	startTime        time.Time
-	statsTime        time.Time             // Last time stats were reset
-	forward          string                // Canonical forward domain name
-	forwardAuthority *delegation.Authority // Could be either delegated or local
+	statsTime        time.Time  // Last time stats were reset
+	forward          string     // Canonical forward domain name
+	forwardAuthority *authority // Could be either delegated or local
 
 	delegatedReverses []*net.IPNet
 	localReverses     []*net.IPNet
@@ -69,7 +66,7 @@ func (t *autoReverse) Done() <-chan struct{} {
 }
 
 // Return true if added. Return false if duplicate.
-func (t *autoReverse) addAuthority(add *delegation.Authority) bool {
+func (t *autoReverse) addAuthority(add *authority) bool {
 	return t.authorities.append(add)
 }
 
@@ -127,26 +124,4 @@ func (t *autoReverse) Constrain() {
 		}
 		log.Major("Process Constraint: ", osutil.ConstraintReport(t.cfg.chroot))
 	}
-}
-
-var soaTime = time.Now() // Set here so tests can over-ride
-
-func (t *autoReverse) synthesizeSOA(auth *delegation.Authority, mboxDomain string) {
-	auth.SOA.Hdr.Name = auth.Domain
-	auth.SOA.Hdr.Class = dns.ClassINET
-	auth.SOA.Hdr.Rrtype = dns.TypeSOA
-	auth.SOA.Hdr.Ttl = t.cfg.TTLAsSecs
-	if len(auth.NS) > 0 { // Zero is possible for locals
-		auth.SOA.Ns = auth.NS[0].(*dns.NS).Ns
-	} else {
-		auth.SOA.Ns = auth.Domain
-	}
-
-	auth.SOA.Mbox = "hostmaster." + mboxDomain // Why not?
-	auth.SOA.Serial = uint32(soaTime.Unix())
-
-	auth.SOA.Refresh = 110040 // None of these timers really have much meaning
-	auth.SOA.Retry = 110080   // but we have to populate them with something so give them
-	auth.SOA.Expire = 28      // signature values which make "von Fastrand" proud.
-	auth.SOA.Minttl = 9030    // Hit me up if you recognize all of these numbers.
 }

@@ -2,16 +2,18 @@ package main
 
 import (
 	"testing"
-
-	"github.com/markdingo/autoreverse/delegation"
 )
 
 func TestAutoReverseAddA(t *testing.T) {
 	ar := newAutoReverse(nil, nil)
 
-	d1 := &delegation.Authority{Domain: "1.example.net."}
-	d2 := &delegation.Authority{Domain: "2.example.com."}
-	d3 := &delegation.Authority{Domain: "3.example.org."}
+	d1 := &authority{forward: true}
+	d1.Domain = "1.example.net."
+	d2 := &authority{forward: true}
+	d2.Domain = "2.example.com."
+	d3 := &authority{forward: true}
+	d3.Domain = "3.example.org."
+
 	if !ar.addAuthority(d1) {
 		t.Error("Add of", d1, "should have succeeded")
 	}
