@@ -156,7 +156,7 @@ func (t *server) ServeDNS(wtr dns.ResponseWriter, query *dns.Msg) {
 		req.addNote("Non-probe query during probe")
 	}
 
-	// Dispatch 2. Chaoas via database
+	// Dispatch 2. Chaos via database
 	// nsd returns "Refused" for any non-matching CHAOS. I'm not sure I agree with
 	// this since our CHAOS RRs are in a hierarchy database. But it's such an
 	// edge-case that for now I'll mostly go along with the group-think. Another
