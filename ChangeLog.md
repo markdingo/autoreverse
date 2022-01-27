@@ -1,4 +1,7 @@
 # autoreverse Change Log
+### v1.2.0 -- 2022-01-27
+  * Refactor query dispatch logic to take advantage of the tree database
+  * Reimplement database as a tree to better distinguish NXDomain vs NOError
   * Have ConstraintReport() report the chroot path
   * Wrap all returned errors via fmt.Errorf() with original error
   * More sophisticated treatment of cookie timestamps

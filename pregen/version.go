@@ -8,7 +8,7 @@ package pregen
 
 const (
 	// Version is auto-generated from ChangeLog.md
-	Version = "v1.1.0"
+	Version = "v1.2.0"
 	// ReleaseDate is also auto-generated from ChangeLog.md
-	ReleaseDate = "2021-12-23"
+	ReleaseDate = "2022-01-27"
 )
