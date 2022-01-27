@@ -160,9 +160,15 @@ func (t *PTRZone) loadFromAXFR(db *database.Database, auths authorities) error {
 	return nil
 }
 
-// Load the ZOA address RRs into the candidate database if they are in-bailiwick.
+// Load in-bailiwick Zone Of Authority address RRs into the candidate database. All other
+// RRs (SOA, NS) have specific handled in the dns dispatch code so they need not be
+// added. Regardless, we always add in the SOA it it's set so as to force a NoError vs
+// NXDomain for authority queries with non-matching qTypes.
 func (t *autoReverse) loadFromAuthorities(db *database.Database) (count int) {
 	for _, auth := range t.authorities.slice {
+		if auth.SOA.Hdr.Rrtype == dns.TypeSOA {
+			db.AddRR(&auth.SOA)
+		}
 		for _, rr := range auth.AAAA {
 			if t.findInBailiwick(rr.Header().Name) != nil {
 				db.AddRR(rr)

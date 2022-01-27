@@ -9,8 +9,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/miekg/dns"
+
 	"github.com/markdingo/autoreverse/database"
-	"github.com/markdingo/autoreverse/delegation"
+	"github.com/markdingo/autoreverse/dnsutil"
 	"github.com/markdingo/autoreverse/log"
 	"github.com/markdingo/autoreverse/mock"
 	mockDNS "github.com/markdingo/autoreverse/mock/dns"
@@ -60,11 +62,15 @@ func TestNewPTRZoneFromURL(t *testing.T) {
 	}
 }
 
+// 192, ULA, Google, Google
 func setAuthorities(ar *autoReverse) {
-	ar.authorities.append(&delegation.Authority{Domain: "192.in-addr.arpa."})
-	ar.authorities.append(&delegation.Authority{Domain: "8.b.d.0.1.0.0.2.ip6.arpa."}) // ULA
-	ar.authorities.append(&delegation.Authority{Domain: "0.6.8.4.1.0.0.2.ip6.arpa."}) // Google
-	ar.authorities.append(&delegation.Authority{Domain: "8.8.in-addr.arpa."})
+	for _, d := range []string{"192.in-addr.arpa.", "8.b.d.0.1.0.0.2.ip6.arpa.", "0.6.8.4.1.0.0.2.ip6.arpa.", "8.8.in-addr.arpa."} {
+		a := &authority{}
+		a.Domain = d
+		a.cidr = &net.IPNet{}
+		ar.addAuthority(a)
+	}
+
 	ar.authorities.sort()
 }
 
@@ -203,7 +209,7 @@ func TestLoadFromAXFR(t *testing.T) {
 			continue
 		}
 
-		ptrs := db.Lookup(tc.sampleIP)
+		ptrs := dbLookupIP(db, tc.sampleIP)
 		if len(ptrs) != tc.sampleCount {
 			t.Error(ix, url, "Load returned wrong sample count",
 				tc.sampleIP, tc.sampleCount, len(ptrs))
@@ -368,7 +374,7 @@ func TestLoadFromHTTP(t *testing.T) {
 				continue
 			}
 
-			ptrs := db.Lookup(tc.sampleIP)
+			ptrs := dbLookupIP(db, tc.sampleIP)
 			if len(ptrs) != tc.sampleCount {
 				t.Error(ix, "Load returned wrong sample count",
 					tc.sampleIP, tc.sampleCount, len(ptrs))
@@ -397,11 +403,12 @@ func TestLoadFromHTTP(t *testing.T) {
 func checkExampleNet(t *testing.T, src string, db *database.Database) {
 	if db.Count() != 9 {
 		t.Error(src, "did not load 9 PTRs, got", db.Count())
+		db.Dump()
 	}
 
 	for _, ip := range []string{"192.0.2.123", "2001:db8::125",
 		"8.8.8.8", "2001:4860:4860::8844"} {
-		ptrs := db.Lookup(ip)
+		ptrs := dbLookupIP(db, ip)
 		if len(ptrs) != 1 {
 			t.Error("Expected", ip, "to load one PTR from example.net.zone, not",
 				len(ptrs))
@@ -415,7 +422,7 @@ func checkULAPtr(t *testing.T, src string, db *database.Database) {
 	}
 
 	for _, ip := range []string{"2001:db8::1", "2001:db8::2"} {
-		ptrs := db.Lookup(ip)
+		ptrs := dbLookupIP(db, ip)
 		if len(ptrs) != 1 {
 			t.Error("Expected", ip,
 				"to load one PTR from 8.b.d.0.1.0.0.2.ip6.arpa.zone, not",
@@ -455,4 +462,20 @@ func touch(path string) {
 		return
 	}
 	f.WriteAt(buf, 0) // Should bump DTM
+}
+
+// Helper which implements the old database API
+func dbLookupIP(db *database.Database, ipStr string) (ar []dns.RR) {
+	ip := net.ParseIP(ipStr)
+	if ip == nil {
+		return
+	}
+	qName := dnsutil.IPToReverseQName(ip)
+	if len(qName) == 0 {
+		return
+	}
+
+	ar, _ = db.LookupRR(dns.ClassINET, dns.TypePTR, qName)
+
+	return
 }

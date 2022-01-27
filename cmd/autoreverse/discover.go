@@ -62,9 +62,9 @@ func (t *autoReverse) discoverForward(finder *delegation.Finder, domain string) 
 		return fmt.Errorf("Forward: Probe failed to self-identify %s", fr.Target.Domain)
 	}
 
-	auth := fr.Target // Take a local copy so fr can be fully GCed
+	auth := newAuthority(fr.Target, true)
 	auth.Source = domain
-	t.synthesizeSOA(auth, fr.Parent.Domain)
+	auth.synthesizeSOA(fr.Parent.Domain, t.cfg.TTLAsSecs)
 	logAuth(auth, "Forward")
 
 	t.forwardAuthority = auth
@@ -130,9 +130,10 @@ func (t *autoReverse) discoverReverse(finder *delegation.Finder, forward string,
 		return fmt.Errorf("Reverse: Probe failed to self-identify %s", fr.Target.Domain)
 	}
 
-	auth := fr.Target            // Take a convenience copy
-	auth.Source = ipNet.String() // and complete the fit-out
-	t.synthesizeSOA(auth, forward)
+	auth := newAuthority(fr.Target, false)
+	auth.cidr = ipNet
+	auth.Source = ipNet.String()
+	auth.synthesizeSOA(forward, t.cfg.TTLAsSecs)
 
 	if !t.addAuthority(auth) {
 		return fmt.Errorf("-reverse %s is duplicated", auth.Domain)
@@ -144,7 +145,7 @@ func (t *autoReverse) discoverReverse(finder *delegation.Finder, forward string,
 }
 
 // Print auth details to log - should be called after SOA synthetic
-func logAuth(auth *delegation.Authority, name string) {
+func logAuth(auth *authority, name string) {
 	log.Major(name, " Zone of Authority ", auth.Domain)
 	log.Minor(dnsutil.PrettySOA(&auth.SOA, false))
 	log.Minor(dnsutil.PrettyRRSet(auth.NS, false))

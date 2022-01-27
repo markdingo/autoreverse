@@ -6,16 +6,15 @@ import (
 
 	"github.com/miekg/dns"
 
-	"github.com/markdingo/autoreverse/delegation"
 	"github.com/markdingo/autoreverse/dnsutil"
 )
 
 // Synthesize the --local-forward zone which includes making an SOA.
 func (t *autoReverse) generateLocalForward(forward string) {
-	auth := &delegation.Authority{}
+	auth := &authority{forward: true}
 	auth.Source = "--local-forward"
 	auth.Domain = dns.CanonicalName(forward)
-	t.synthesizeSOA(auth, auth.Domain)
+	auth.synthesizeSOA(auth.Domain, t.cfg.TTLAsSecs)
 	logAuth(auth, "Local Forward")
 	t.forwardAuthority = auth
 	t.addAuthority(auth)
@@ -26,7 +25,7 @@ func (t *autoReverse) generateLocalForward(forward string) {
 // generateLocalReverses relies on the forward zone already being set.
 func (t *autoReverse) generateLocalReverses() error {
 	for _, ipNet := range t.localReverses {
-		auth := &delegation.Authority{}
+		auth := &authority{cidr: ipNet}
 		auth.Source = "--local-reverse"
 
 		// The reverse zone is needed to match the PTR queries. In a slightly
@@ -56,7 +55,7 @@ func (t *autoReverse) generateLocalReverses() error {
 			auth.NS = append(auth.NS, rr)
 
 		}
-		t.synthesizeSOA(auth, t.forward)
+		auth.synthesizeSOA(t.forward, t.cfg.TTLAsSecs)
 		if !t.addAuthority(auth) {
 			return fmt.Errorf("--local-reverse %s is duplicated", auth.Domain)
 		}

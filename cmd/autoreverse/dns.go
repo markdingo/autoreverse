@@ -12,6 +12,33 @@ import (
 	"github.com/markdingo/autoreverse/log"
 )
 
+// Many serve* functions either serve their answer or return a pending result as they do
+// not know whether the caller has other options available to them. serveResult conveys
+// that info back to the caller.
+type serveResult int
+
+const (
+	serveDone serveResult = iota // Caller concludes request processing
+	NoError                      // Caller calls serveNoError() if no options remain
+	NXDomain                     // Caller calls serveNxDomain() if no options remain
+	FormErr                      // Caller calls serveFormErr()
+)
+
+func (t *serveResult) String() string {
+	switch *t {
+	case serveDone:
+		return "serveDone"
+	case NoError:
+		return "NoError"
+	case NXDomain:
+		return "NXDomain"
+	case FormErr:
+		return "FormErr"
+	}
+
+	return fmt.Sprintf("?? sr %d", *t)
+}
+
 // Called from miekg - handles all DNS queries. All query logic is embedded in this one
 // rather large function.
 func (t *server) ServeDNS(wtr dns.ResponseWriter, query *dns.Msg) {
@@ -24,8 +51,7 @@ func (t *server) ServeDNS(wtr dns.ResponseWriter, query *dns.Msg) {
 	defer t.addStats(&req.stats) // Add req.stats to t.stats
 
 	// Validate query. Extra can have EDNS options so don't length check that slice.
-	// As of RFC7873 a query with no questions and a COOKIE OPT is valid but we don't
-	// do cookies yet, so treat it as invalid.
+	// As of RFC7873 a query with no questions and a COOKIE OPT is valid.
 	//
 	// miekg.DefaultMsgAcceptFunc does some checking prior to the query arriving here,
 	// but we are slightly more paranoid.
@@ -48,10 +74,8 @@ func (t *server) ServeDNS(wtr dns.ResponseWriter, query *dns.Msg) {
 	req.findCookies()
 	if req.cookiesPresent {
 		req.stats.gen.cookie++
-		if !req.cookieWellFormed { // This means the OPT is malformed
-			req.response.SetRcodeFormatError(query)
-			t.writeMsg(wtr, req)
-			req.stats.gen.formatError++
+		if !req.cookieWellFormed { // Specifically this means the OPT is malformed
+			t.serveFormErr(wtr, req)
 			req.addNote("Malformed cookie")
 			return
 		}
@@ -72,14 +96,12 @@ func (t *server) ServeDNS(wtr dns.ResponseWriter, query *dns.Msg) {
 		return
 	}
 
-	// After the weird cookie-request, we now only accept "normal" queries
+	// Subsequent to the weird non-request cookie-request, we only accept "normal" queries
 	if len(req.query.Question) != 1 ||
 		len(req.query.Answer) != 0 ||
 		len(req.query.Ns) != 0 ||
 		req.query.Opcode != dns.OpcodeQuery {
-		req.response.SetRcodeFormatError(query)
-		t.writeMsg(wtr, req)
-		req.stats.gen.formatError++
+		t.serveFormErr(wtr, req)
 		req.addNote("Malformed Query")
 		return
 	}
@@ -98,9 +120,20 @@ func (t *server) ServeDNS(wtr dns.ResponseWriter, query *dns.Msg) {
 	req.db = t.dbGetter.Current()  // Final setup for request prior to dispatching
 	req.mutables = t.getMutables() // Get current mutables from server instance
 
-	// Pre-processing checks and setup is complete. The order of dispatching is: probe
-	// queries first followed by chaos followed by regular queries.
+	// Pre-processing complete. Dispatch order:
+	//
+	// 1. Probe
+	// 2. Chaos via database
+	// 3. In-Bailiwick or Passthru
+	// 4. Not ClassINET
+	// 5. Special Authority Queries (SOA, NS, ANY)
+	// 6. Database
+	// 7. Synthesis
+	// 8. Pending serveResult
 
+	//		dnsutil.ClassToString(dns.Class(req.question.Qclass)),
+	//		dnsutil.TypeToString(req.question.Qtype), req.question.Name)
+	// Dispatch 1. Probe
 	// Probes can be sent multiple times and this function responds possitively each
 	// time. Whether probes are oneshot or multishot process is determined by probe
 	// senders not probe receivers. And probe senders do that be modifying the
@@ -111,7 +144,6 @@ func (t *server) ServeDNS(wtr dns.ResponseWriter, query *dns.Msg) {
 	// necessary to answer forward queries while working out authority for the reverse
 	// zone. This is particularly likely when the forward and reverse are serviced by
 	// the same name server - which is expected to be common in the autoreverse case.
-
 	if req.probe != nil {
 		if req.probe.QuestionMatches(req.question) {
 			log.Minor("Valid Probe received from ", req.src)
@@ -121,57 +153,57 @@ func (t *server) ServeDNS(wtr dns.ResponseWriter, query *dns.Msg) {
 			t.writeMsg(wtr, req)
 			return
 		}
-		req.addNote("Non-probe query during prone")
+		req.addNote("Non-probe query during probe")
 	}
 
-	// Chaos helps check reachability thru firewalls, port forwarding and whatnot.
-
-	if t.cfg.chaosFlag &&
-		req.question.Qclass == dns.ClassCHAOS &&
-		req.question.Qtype == dns.TypeTXT {
-		t.serveCHAOS(wtr, req)
-		req.stats.gen.chaos++
-		return
-	}
-
-	// All special-case dispatching is complete. All legitimate queries must now be in
-	// a zone of authority which is only ever in ClassINET. This following test is one
-	// of the reasons why passthru is INET-only. These tests *could* be rearranged to
-	// allow passthru of other classes, but why bother? The focus is more about
-	// autoreverse processing.
-
-	if req.question.Qclass != dns.ClassINET { // Only serve INET henceforth
-		req.addNote(fmt.Sprintf("Wrong class %s",
-			dnsutil.ClassToString(dns.Class(req.question.Qclass))))
-		t.serveRefused(wtr, req)
-		req.stats.gen.wrongClass++
-		return
-	}
-
-	req.setAuthority()
-	if req.auth == nil { // One of our domains?
-		if len(t.cfg.passthru) > 0 { // Nope - do we passthru?
-			t.passthru(wtr, req)
-		} else {
-			req.addNote("out of bailiwick")
+	// Dispatch 2. Chaoas via database
+	// nsd returns "Refused" for any non-matching CHAOS. I'm not sure I agree with
+	// this since our CHAOS RRs are in a hierarchy database. But it's such an
+	// edge-case that for now I'll mostly go along with the group-think. Another
+	// factor is that we have not Zone Of Authority and thus no SOA so other responses
+	// such as NoError cannot be generated properly, so "Refused" is our
+	// get-out-of-jail card.
+	if t.cfg.chaosFlag && req.question.Qclass == dns.ClassCHAOS {
+		if t.serveDatabase(wtr, req) != serveDone {
 			t.serveRefused(wtr, req)
-			req.stats.gen.noAuthority++
 		}
 		return
 	}
 
-	switch req.question.Qtype { // Normal Query Dispatch
-	case dns.TypeANY:
-		if req.qName == req.auth.Domain {
+	// Dispatch 3. In-Bailiwick or Passthru
+	req.setAuthority()
+	if req.auth == nil { // One of our domains?
+		if len(t.cfg.passthru) > 0 { // Nope - do we passthru?
+			t.passthru(wtr, req)
+			return
+		}
+		req.addNote("out of bailiwick")
+		t.serveRefused(wtr, req)
+		req.stats.gen.noAuthority++
+		return
+	}
+
+	// Dispatch 4. Not ClassINET
+	if req.question.Qclass != dns.ClassINET {
+		t.serveRefused(wtr, req)
+		req.addNote(fmt.Sprintf("Wrong class %s",
+			dnsutil.ClassToString(dns.Class(req.question.Qclass))))
+		return
+	}
+
+	// Dispatch 5. Special Authority Queries
+	// Handle queries which populate Extra RRs or ask for ANY. Otherwise fall thru to
+	// the database lookup which contains regular RRs for the Authority Zone.
+	if req.qName == req.auth.Domain {
+		switch req.question.Qtype {
+		case dns.TypeANY:
 			req.response.SetRcode(req.query, dns.RcodeSuccess)
 			req.response.Answer = append(req.response.Answer, &req.auth.SOA)
 			req.stats.gen.authZoneANY++
 			t.writeMsg(wtr, req)
 			return
-		}
 
-	case dns.TypeSOA:
-		if req.qName == req.auth.Domain {
+		case dns.TypeSOA:
 			req.response.SetRcode(req.query, dns.RcodeSuccess)
 			req.response.Answer = append(req.response.Answer, &req.auth.SOA)
 			req.response.Ns = append(req.response.Ns, req.auth.NS...)
@@ -180,10 +212,8 @@ func (t *server) ServeDNS(wtr dns.ResponseWriter, query *dns.Msg) {
 			req.stats.gen.authZoneSOA++
 			t.writeMsg(wtr, req)
 			return
-		}
 
-	case dns.TypeNS:
-		if req.qName == req.auth.Domain {
+		case dns.TypeNS:
 			req.response.SetRcode(req.query, dns.RcodeSuccess)
 			req.response.Answer = append(req.response.Ns, req.auth.NS...)
 			req.response.Extra = append(req.response.Extra, req.auth.A...)
@@ -192,52 +222,37 @@ func (t *server) ServeDNS(wtr dns.ResponseWriter, query *dns.Msg) {
 			t.writeMsg(wtr, req)
 			return
 		}
-
-	case dns.TypePTR:
-		if t.servePTR(wtr, req) {
-			return
-		}
-
-	case dns.TypeA:
-		if t.MatchQNameAndServe(wtr, req, req.auth.A) {
-			req.stats.gen.authZoneA++
-			return
-		}
-		if t.cfg.synthesizeFlag && t.serveA(wtr, req) {
-			return
-		}
-
-	case dns.TypeAAAA:
-		if t.MatchQNameAndServe(wtr, req, req.auth.AAAA) {
-			req.stats.gen.authZoneAAAA++
-			return
-		}
-		if t.cfg.synthesizeFlag && t.serveAAAA(wtr, req) {
-			return
-		}
-
-	default:
-		if req.qName == req.auth.Domain {
-			t.serveNoError(wtr, req)
-			return
-		}
 	}
 
-	// In our authority, but nothing we recognize - ergo NXDomain
+	// Dispatch 6. Database - remember result in case synthesis is not enabled
+	pending := t.serveDatabase(wtr, req)
+	if pending == serveDone {
+		return
+	}
 
-	t.serveNXDomain(wtr, req)
-}
+	// Dispatch 7. Synthesis.
+	// If synthesize is allowed, the pending results of the database lookup will be
+	// overridden, otherwise they'll stand.
+	if t.cfg.synthesizeFlag {
+		if req.auth.forward {
+			pending = t.serveForward(wtr, req)
+		} else {
+			pending = t.serveReverse(wtr, req)
+		}
+	} else {
+		req.addNote("No Synth")
+		// XXXX stats
+	}
 
-func (t *server) serveRefused(wtr dns.ResponseWriter, req *request) {
-	req.response.SetRcode(req.query, dns.RcodeRefused)
-	t.writeMsg(wtr, req)
-}
-
-func (t *server) serveNXDomain(wtr dns.ResponseWriter, req *request) {
-	req.response.SetRcode(req.query, dns.RcodeNameError)
-	req.response.Ns = append(req.response.Ns, &req.auth.SOA)
-	t.writeMsg(wtr, req)
-	req.stats.gen.nxDomain++
+	// Dispatch 8. Pending serveResult
+	switch pending {
+	case NoError:
+		t.serveNoError(wtr, req)
+	case NXDomain:
+		t.serveNXDomain(wtr, req)
+	case FormErr:
+		t.serveFormErr(wtr, req)
+	}
 }
 
 func (t *server) serveNoError(wtr dns.ResponseWriter, req *request) {
@@ -247,159 +262,36 @@ func (t *server) serveNoError(wtr dns.ResponseWriter, req *request) {
 	req.stats.gen.noError++
 }
 
-// Expecting 192-0-2-1.Domain. Unlike ipv6, there is no compression of the IP address to
-// cover multiple zero octets, which makes parsing simpler. IOWs, 192.0.0.1 does not get
-// converted into 192--1.
-//
-// We are expecting just synthetic names but mdns programs tend to generate a bunch of
-// oddball queries such as lb._dns-sd._udp.128.2.0.192.in-addr.arpa which are
-// in-bailiwick, but if we don't get a match that we can serve, let the caller deal with.
-//
-// Return true if the query was answered.
-func (t *server) serveA(wtr dns.ResponseWriter, req *request) bool {
-	statsp := &req.stats.AForward
-	statsp.queries++
-
-	hostname := strings.TrimSuffix(req.qName, "."+req.auth.Domain)
-	if strings.Index(hostname, ".") >= 0 { // Don't allow 192.0.2.0.domain - should be 192-0-2-0.domain
-		statsp.malformed++
-		return false
-	}
-	ipStr := strings.ReplaceAll(hostname, "-", ".")
-	ip := net.ParseIP(ipStr)
-	if ip == nil { // Couldn't convert back into an ip address
-		statsp.malformed++
-		return false
-	}
-	ip = ip.To4()
-	if ip == nil {
-		statsp.malformed++
-		return false
-	}
-	if len(ip) != net.IPv4len {
-		statsp.malformed++
-		return false
-	}
-
-	req.response.SetReply(req.query)
-	rr := new(dns.A)
-	rr.Hdr.Name = req.question.Name
-	rr.Hdr.Class = req.question.Qclass
-	rr.Hdr.Rrtype = req.question.Qtype
-	rr.Hdr.Ttl = t.cfg.TTLAsSecs
-	rr.A = ip
-	req.response.Answer = append(req.response.Answer, rr)
+// I do not know why miekg as a specific function for FormErr and just a generic one for
+// all other returns, but I'll use the specific one just in case there's a good reason.
+func (t *server) serveFormErr(wtr dns.ResponseWriter, req *request) {
+	req.response.SetRcodeFormatError(req.query)
 	t.writeMsg(wtr, req)
-	statsp.good++
-	statsp.answers += len(req.response.Answer)
-
-	return true
+	req.stats.gen.formatError++
 }
 
-// Expecting 2001-db83--1.domain. Convert the synthetic name back into an IP address and
-// reply with an AAAA.
-//
-// Return true if the query was answered.
-func (t *server) serveAAAA(wtr dns.ResponseWriter, req *request) bool {
-	statsp := &req.stats.AAAAForward
-	statsp.queries++
-
-	hostname := strings.TrimSuffix(req.qName, "."+req.auth.Domain)
-
-	if strings.Index(hostname, ":") >= 0 { // Don't allow fd00::1.domain - should be fd00--1.domain
-		statsp.malformed++
-		return false
-	}
-
-	ipStr := strings.ReplaceAll(hostname, "-", ":")
-	ip := net.ParseIP(ipStr)
-	if ip == nil { // Couldn't convert back into an ip address
-		statsp.malformed++
-		return false
-	}
-	if len(ip) != net.IPv6len {
-		statsp.malformed++
-		return false
-	}
-
-	req.response.SetReply(req.query)
-	rr := new(dns.AAAA)
-	rr.Hdr.Name = req.question.Name
-	rr.Hdr.Class = req.question.Qclass
-	rr.Hdr.Rrtype = req.question.Qtype
-	rr.Hdr.Ttl = t.cfg.TTLAsSecs
-	rr.AAAA = ip
-	req.response.Answer = append(req.response.Answer, rr)
+func (t *server) serveNXDomain(wtr dns.ResponseWriter, req *request) {
+	req.response.SetRcode(req.query, dns.RcodeNameError)
+	req.response.Ns = append(req.response.Ns, &req.auth.SOA)
 	t.writeMsg(wtr, req)
-	statsp.good++
-	statsp.answers += len(req.response.Answer)
-
-	return true
+	req.stats.gen.nxDomain++
 }
 
-// Expecting the usual reverse syntax. Return true if we answered the question, otherwise
-// let the caller deal with any subsequent processing. The PTR database is consulted first
-// to see if there are deduced PTRs for this qName. If no database entries are found *and*
-// the config allows synthetic responses, generate one.
-func (t *server) servePTR(wtr dns.ResponseWriter, req *request) bool {
-	var (
-		reverseIPStr string
-		ip           net.IP
-		err          error
-		ar           []dns.RR
-		statsp       *queryStats
-	)
+func (t *server) serveRefused(wtr dns.ResponseWriter, req *request) {
+	req.response.SetRcode(req.query, dns.RcodeRefused)
+	t.writeMsg(wtr, req)
+	// XXXX req.stats.gen.refused++
+}
 
-	switch {
-	case strings.HasSuffix(req.qName, dnsutil.V4Suffix):
-		statsp = &req.stats.APtr
-		statsp.queries++
-		reverseIPStr = strings.TrimSuffix(req.qName, dnsutil.V4Suffix)
-		ip, err = dnsutil.InvertPtrToIPv4(reverseIPStr)
-		if err == nil {
-			ar = req.db.Lookup(ip.String())
+func (t *server) serveDatabase(wtr dns.ResponseWriter, req *request) serveResult {
+	ar, nx := req.db.LookupRR(req.question.Qclass, req.question.Qtype, req.qName)
+	if len(ar) == 0 {
+		if nx {
+			return NXDomain
 		}
-
-	case strings.HasSuffix(req.qName, dnsutil.V6Suffix):
-		statsp = &req.stats.AAAAPtr
-		statsp.queries++
-		reverseIPStr = strings.TrimSuffix(req.qName, dnsutil.V6Suffix)
-		ip, err = dnsutil.InvertPtrToIPv6(reverseIPStr)
-		if err == nil {
-			ar = req.db.Lookup(ip.String())
-		}
-
-	default: // Unexpected suffix - Dispatcher should not have let this in
-		log.Major("Danger:Dispatcher should never let in ", req.qName)
-		req.response.SetRcodeFormatError(req.query)
-		t.writeMsg(wtr, req)
-		req.stats.gen.formatError++
-		req.addNote("bad Mux")
-		return true
+		return NoError
 	}
 
-	if err != nil { // Reverse IP address could not be parsed from qName
-		statsp.malformed++ // Not really malformed in the general sense, just our sense
-		return false       // Punt to caller
-	}
-
-	req.logQName = ip.String() // Log a more compact variant
-	if len(ar) == 0 {          // If database returned zero PTRs
-		if t.cfg.synthesizeFlag { // and config allows synthesis, then make one up!
-			ar = append(ar,
-				dnsutil.SynthesizePTR(req.qName, req.mutables.ptrSuffix, ip))
-			req.addNote("Synth")
-		} else {
-			req.addNote("No Synth")
-			t.serveNXDomain(wtr, req)
-			statsp.noSynth++
-			return true
-		}
-	}
-
-	// The slice "ar" now contains all the candidate answers. Set TTLs for RRs that
-	// are at zero and restrict count to the maximum allowed. The writeMsg() function
-	// worries about message truncation.
 	req.response.SetReply(req.query)
 	for _, rr := range ar {
 		if t.cfg.maxAnswers <= 0 || len(req.response.Answer) < t.cfg.maxAnswers {
@@ -412,33 +304,219 @@ func (t *server) servePTR(wtr dns.ResponseWriter, req *request) bool {
 
 	// Truncate msg to fit max size. Only relevant if connection is UDP.
 	if req.maxSize > 0 {
-		req.response.Truncate(int(req.maxSize)) // Removes excess RRs and sets TC=1 if needed
+		req.response.Truncate(int(req.maxSize)) // Removes excess RRs and sets TC=1
 	}
 
+	t.writeMsg(wtr, req)
+	// XXXX Stats fixup
+	// statsp.good++
+	// statsp.answers += len(req.response.Answer)
+
+	return serveDone
+}
+
+// The qName is in a known forward domain and given we're called after the database
+// lookup, that means the query can only legitimately be an address query of a reverse of
+// a synthesized PTR and thus should be something like:
+//
+// dig -t $qType fd2d-ffff-1234-fe--1.$forward // fd2d:ffff:1234:fe::/64
+// dig -t $qType 192-168-0-123.$forward // 192.168.0.0/24
+// dig -t $qType 192-168--1.$forward // 192:168::/64
+//
+// The IP address needs to be extract from the qName and checked against our reverse
+// authorities to ensure it's an IP address that we could have concievably generated a
+// PTR. Note that because this is all algorithmic, all legitimate IP addresses can be
+// queried against the forward authorities at any time.
+//
+// To extract the IP address we need to first know whether it's an ipv4 or ipv6 address.
+// It's subtle but ipv4 qNames have a unique pattern because they don't compress zero
+// octets, unlike ipv6. Specifically, well formed ipv4 forwards are always four non-zero
+// length decimals separated by '-'. Anything else has to either be an ipv6 address or
+// invalid. We take advantage of this distinction to determine how to dispatch to the
+// appropriate handler.
+//
+// This convolution is necessary because we need to distinguish between NoError and
+// NXDomain. The naive (and wrong) approach is to use the $qType to decide how to decode
+// the qName prefix.
+func (t *server) serveForward(wtr dns.ResponseWriter, req *request) serveResult {
+	ipStr := strings.TrimSuffix(req.qName, "."+req.auth.Domain)
+	ar := strings.SplitN(ipStr, "-", 4)
+	is4 := true
+	if len(ar) != 4 || strings.Contains(ar[3], "-") { // A legit ipv4?
+		is4 = false
+	} else {
+		for _, v := range ar {
+			if len(v) == 0 {
+				is4 = false
+				break
+			}
+		}
+	}
+
+	if is4 {
+		return t.serveA(wtr, req)
+	} else {
+		return t.serveAAAA(wtr, req)
+	}
+}
+
+// Expecting 192-0-2-1.$forward. Unlike ipv6, there is no compression of the IP address to
+// cover multiple zero octets, which makes parsing simpler. IOWs, 192.0.0.1 does not get
+// converted into 192--1.
+func (t *server) serveA(wtr dns.ResponseWriter, req *request) serveResult {
+	req.stats.AForward.queries++
+
+	ipStr := strings.TrimSuffix(req.qName, "."+req.auth.Domain)
+	if strings.Index(ipStr, ".") >= 0 { // Don't allow 192.0.2.0.domain - should be 192-0-2-0.domain
+		return NXDomain
+	}
+	ipStr = strings.ReplaceAll(ipStr, "-", ".")
+	ip := net.ParseIP(ipStr)
+	if ip == nil { // Couldn't convert back into an ip address
+		return NXDomain
+	}
+	ip = ip.To4()
+	if ip == nil || len(ip) != net.IPv4len { // serveForward() checking should catch this
+		return NXDomain
+	}
+
+	// If ip is not in-bailwick of our reverse zones then NXDomain
+	if req.authorities.findIPInBailiwick(ip) == nil {
+		return NXDomain
+	}
+
+	if req.question.Qtype != dns.TypeA { // If wrong type, NoError
+		return NoError
+	}
+
+	req.response.SetReply(req.query)
+	rr := new(dns.A)
+	rr.Hdr.Name = req.question.Name
+	rr.Hdr.Class = req.question.Qclass
+	rr.Hdr.Rrtype = req.question.Qtype
+	rr.Hdr.Ttl = t.cfg.TTLAsSecs
+	rr.A = ip
+	req.response.Answer = append(req.response.Answer, rr)
+	t.writeMsg(wtr, req)
+	req.stats.AForward.good++
+	req.stats.AForward.answers += len(req.response.Answer)
+
+	return serveDone
+}
+
+// Expecting 2001-db83--1.domain. Convert the synthetic name back into an IP address and
+// reply with an AAAA.
+func (t *server) serveAAAA(wtr dns.ResponseWriter, req *request) serveResult {
+	req.stats.AAAAForward.queries++
+
+	ipStr := strings.TrimSuffix(req.qName, "."+req.auth.Domain)
+	if strings.Index(ipStr, ":") >= 0 { // Don't allow fd00::1.domain - should be fd00--1.domain
+		return NXDomain
+	}
+
+	ipStr = strings.ReplaceAll(ipStr, "-", ":")
+	ip := net.ParseIP(ipStr)
+	if ip == nil { // Couldn't convert back into an ip address
+		return NXDomain
+	}
+	if len(ip) != net.IPv6len {
+		return NXDomain
+	}
+
+	// If ip is not in-bailwick of our reverse zones then NXDomain
+	if req.authorities.findIPInBailiwick(ip) == nil {
+		return NXDomain
+	}
+
+	if req.question.Qtype != dns.TypeAAAA { // If wrong type, NoError
+		return NoError
+	}
+
+	req.response.SetReply(req.query)
+	rr := new(dns.AAAA)
+	rr.Hdr.Name = req.question.Name
+	rr.Hdr.Class = req.question.Qclass
+	rr.Hdr.Rrtype = req.question.Qtype
+	rr.Hdr.Ttl = t.cfg.TTLAsSecs
+	rr.AAAA = ip
+	req.response.Answer = append(req.response.Answer, rr)
+	t.writeMsg(wtr, req)
+	req.stats.AAAAForward.good++
+	req.stats.AAAAForward.answers += len(req.response.Answer)
+
+	return serveDone
+}
+
+// The domain is a known reverse domain which means that a well formed query should be a
+// PTR query such as:
+//
+// dig -t $qType 168.192.in-addr.arpa.
+// dig -t $qType 1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa.
+//
+// As with serveForward() most of this code is dealing with malformed queries and
+// determine what the correct response is. E.g. chopping a few nibbles off the front of an
+// ip6.arpa query can easily still be in-bailiwick resulting in a NOError whereas the same
+// thing for in-addpr.arpa will almost certainly be NXDomain.
+//
+// Since the qName is known to be in-bailiwick of one of our reverse authorities, the
+// range of possibilities are:
+//
+// 1. Well formed reverse which matches the qType - serve the synth answer
+// 2. Well formed reverse which other qType - serve NoError
+// 3. It's a truncated, but otherwise a well formed reverse - serve NoError
+// 4. Malformed reverse such as impossible to invert characters - serve NXDomain
+//
+// By "well formed" and "malformed" we mean a qName which cannot be inverted back to an IP
+// address. This simply makes the query effectively outside any zone we are authoritative
+// for, it does not mean FormErr in the DNS sense. This malformed results in NXDomain.
+func (t *server) serveReverse(wtr dns.ResponseWriter, req *request) serveResult {
+	var (
+		reverseIPStr string
+		ip           net.IP
+		err          error
+		statsp       *qTypeStats
+		truncated    bool
+	)
+
+	switch {
+	case strings.HasSuffix(req.qName, dnsutil.V6Suffix):
+		statsp = &req.stats.AAAAPtr
+		statsp.queries++
+		reverseIPStr = strings.TrimSuffix(req.qName, dnsutil.V6Suffix)
+		ip, truncated, err = dnsutil.InvertPtrToIPv6(reverseIPStr)
+
+	case strings.HasSuffix(req.qName, dnsutil.V4Suffix):
+		statsp = &req.stats.APtr
+		statsp.queries++
+		reverseIPStr = strings.TrimSuffix(req.qName, dnsutil.V4Suffix)
+		ip, truncated, err = dnsutil.InvertPtrToIPv4(reverseIPStr)
+
+	default: // Unexpected suffix - Dispatcher should not have let this in
+		log.Major("Danger:Dispatcher should never let in ", req.qName)
+		req.addNote("bad Mux")
+		return FormErr
+	}
+
+	if err != nil { // Reverse IP address could not be inverted from qName
+		return NXDomain
+	}
+
+	if truncated { // Mostly well-formed, but incomplete
+		req.addNote("Truncated")
+		return NoError
+	}
+
+	req.logQName = ip.String() // Log a more compact variant
+	ptr := dnsutil.SynthesizePTR(req.qName, req.mutables.ptrSuffix, ip)
+	req.addNote("Synth")
+	req.response.SetReply(req.query)
+	ptr.Hdr.Ttl = t.cfg.TTLAsSecs
+	req.response.Answer = append(req.response.Answer, ptr)
 	t.writeMsg(wtr, req)
 	statsp.good++
 	statsp.answers += len(req.response.Answer)
 
-	return true
-}
-
-// Add matching RRs to the response and send. If any RRs match, return true. If no RRs
-// match, don't send and return false.
-func (t *server) MatchQNameAndServe(wtr dns.ResponseWriter, req *request, rrs []dns.RR) bool {
-	for _, rr := range rrs {
-		if rr.Header().Name == req.qName {
-			req.response.Answer = append(req.response.Answer, rr)
-		}
-	}
-
-	if len(req.response.Answer) == 0 {
-		return false
-	}
-
-	req.response.SetRcode(req.query, dns.RcodeSuccess)
-	t.writeMsg(wtr, req)
-
-	return true
+	return serveDone
 }
 
 // writeMsg finalized the output message with all of the common processing then calls

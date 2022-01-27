@@ -8,7 +8,6 @@ import (
 	"github.com/miekg/dns"
 
 	"github.com/markdingo/autoreverse/database"
-	"github.com/markdingo/autoreverse/delegation"
 	"github.com/markdingo/autoreverse/dnsutil"
 	"github.com/markdingo/autoreverse/log"
 )
@@ -38,7 +37,7 @@ type request struct {
 
 	mutables // Copied from server under mutex protection
 
-	auth *delegation.Authority // Match for current request
+	auth *authority // Match for current request
 
 	src        net.Addr // From here on down is log data
 	network    string
@@ -88,8 +87,14 @@ func (t *request) log() {
 	if len(note) > 0 {
 		noteStr = " " + strings.Join(note, ":")
 	}
-	rcodeStr := "ok"
-	if t.response.MsgHdr.Rcode != dns.RcodeSuccess {
+	var rcodeStr string
+	if t.response.MsgHdr.Rcode == dns.RcodeSuccess {
+		if len(t.response.Answer) == 0 {
+			rcodeStr = "ne" // NoError with no answers
+		} else {
+			rcodeStr = "ok"
+		}
+	} else {
 		rcodeStr = dnsutil.RcodeToString(t.response.MsgHdr.Rcode)
 	}
 

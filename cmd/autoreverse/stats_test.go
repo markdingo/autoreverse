@@ -5,23 +5,23 @@ import (
 )
 
 func TestQueryStats(t *testing.T) {
-	var qs1, qs2 queryStats
+	var qs1, qs2 qTypeStats
 	qs1.good = 1
 	qs2.good = 3
 	qs1.add(&qs2)
 	if qs1.good != 4 {
-		t.Error("queryStats.add flawed", qs1, qs2)
+		t.Error("qTypeStats.add flawed", qs1, qs2)
 	}
-	qs3 := queryStats{1, 2, 3, 4, 5}
+	qs3 := qTypeStats{1, 2, 3, 4, 5}
 	qs1.add(&qs3)
 	if qs1.queries != 1 || qs1.good != 6 || qs1.answers != 3 ||
 		qs1.malformed != 4 || qs1.noSynth != 5 {
-		t.Errorf("queryStats.add flawed %+v %+v\n", qs1, qs3)
+		t.Errorf("qTypeStats.add flawed %+v %+v\n", qs1, qs3)
 	}
 
 	s := qs1.String()
 	if s != "q=1 good=6(3) mal=4 nodb=5" {
-		t.Errorf("queryStats.String %s vs %+v\n", s, qs1)
+		t.Errorf("qTypeStats.String %s vs %+v\n", s, qs1)
 	}
 }
 

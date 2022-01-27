@@ -2,6 +2,7 @@ package main
 
 import (
 	"math/rand"
+	"net"
 	"strings"
 	"testing"
 	"time"
@@ -20,7 +21,7 @@ import (
 // the bigger tests have been put into separate modules, such as chaos and authority.
 
 // Early validation testing prior to authority
-func TestFormErr(t *testing.T) {
+func TestDNSFormErr(t *testing.T) {
 	out := &mock.IOWriter{}
 	log.SetOut(out)
 	server := newServer(&config{logQueriesFlag: true}, database.NewGetter(), resolver.NewResolver(), "", "") // Make a skeletal server
@@ -69,7 +70,7 @@ func testInvalid(t *testing.T, server *server, m *dns.Msg) {
 	}
 }
 
-func TestProbe(t *testing.T) {
+func TestDNSProbe(t *testing.T) {
 	out := &mock.IOWriter{}
 	log.SetOut(out)
 	log.SetLevel(log.MinorLevel)
@@ -78,7 +79,8 @@ func TestProbe(t *testing.T) {
 	cfg := &config{logQueriesFlag: true}
 	server := newServer(cfg, database.NewGetter(), res, "", "")
 	rand.Seed(0) // Make probe generation predictable
-	a1 := &delegation.Authority{Domain: "fozzy.example.net."}
+	a1 := &authority{forward: true}
+	a1.Domain = "fozzy.example.net."
 	pr := delegation.NewForwardProbe(a1.Domain)
 	var auths authorities
 	auths.append(a1)
@@ -115,19 +117,19 @@ func TestProbe(t *testing.T) {
 	}
 
 	// Check logging output
-	exp := `ru=REFUSED q=MX/example.org. s=127.0.0.2:4056 id=2 h=U sz=40/1232 C=0/0/1 Non-probe query during prone:out of bailiwick
+	exp := `ru=REFUSED q=MX/example.org. s=127.0.0.2:4056 id=2 h=U sz=40/1232 C=0/0/1 Non-probe query during probe:out of bailiwick
   Valid Probe received from 127.0.0.2:4056
 ru=ok q=AAAA/cubyh.fozzy.example.net. s=127.0.0.2:4056 id=1 h=U sz=103/1232 C=1/0/1 Probe match
 `
 
 	got := out.String()
 	if got != exp {
-		t.Error("Log data differs. Got:", got, "Exp:", exp)
+		t.Error("Log data differs. \n Got:", got, "Exp:", exp)
 	}
 
 }
 
-func TestWrongClass(t *testing.T) {
+func TestDNSWrongClass(t *testing.T) {
 	out := &mock.IOWriter{}
 	log.SetOut(out)
 	log.SetLevel(log.MajorLevel)
@@ -137,9 +139,14 @@ func TestWrongClass(t *testing.T) {
 	res := resolver.NewResolver()
 	cfg := &config{logQueriesFlag: true}
 	server := newServer(cfg, database.NewGetter(), res, "", "")
+	a := &authority{forward: true}
+	a.Domain = "example.net."
+	var auths authorities
+	auths.append(a)
+	server.setMutables("", nil, auths)
 
 	// First try with an invalid type
-	query := setQuestion(dns.ClassHESIOD, dns.TypeNS, "ns.hs.")
+	query := setQuestion(dns.ClassHESIOD, dns.TypeNS, "ns.example.net.")
 	server.ServeDNS(wtr, query)
 	resp := wtr.Get()
 	if resp == nil {
@@ -150,14 +157,14 @@ func TestWrongClass(t *testing.T) {
 	}
 
 	// Check error logging
-	exp := "ru=REFUSED q=NS/ns.hs. s=127.0.0.2:4056 id=1 h=U sz=34/1232 C=0/0/1 Wrong class HS\n"
+	exp := "ru=REFUSED q=NS/ns.example.net. s=127.0.0.2:4056 id=1 h=U sz=43/1232 C=0/0/1 Wrong class HS\n"
 	got := out.String()
 	if exp != got {
-		t.Error("Error log mismatch. Got:", got, "Exp:", exp)
+		t.Error("Error log mismatch. \n Got:", got, "Exp:", exp)
 	}
 
 	out.Reset()
-	query = setQuestion(2021, dns.TypeA, "2021.A.")
+	query = setQuestion(2021, dns.TypeA, "2021.example.net.")
 	server.ServeDNS(wtr, query)
 	resp = wtr.Get()
 	if resp == nil {
@@ -168,10 +175,10 @@ func TestWrongClass(t *testing.T) {
 	}
 
 	// Check error logging
-	exp = "ru=REFUSED q=A/2021.a. s=127.0.0.2:4056 id=1 h=U sz=35/1232 C=0/0/1 Wrong class C-2021\n"
+	exp = "ru=REFUSED q=A/2021.example.net. s=127.0.0.2:4056 id=1 h=U sz=45/1232 C=0/0/1 Wrong class C-2021\n"
 	got = out.String()
 	if exp != got {
-		t.Error("Error log mismatch. Got:", got, "Exp:", exp)
+		t.Error("Error log mismatch. \n Got:", got, "Exp:", exp)
 	}
 }
 
@@ -180,7 +187,7 @@ const (
 	nsidAsHex  = "4a616d6d696e"
 )
 
-func TestServeBadPTR(t *testing.T) {
+func TestDNSServeBadPTR(t *testing.T) {
 	out := &mock.IOWriter{}
 	log.SetOut(out)
 	log.SetLevel(log.MajorLevel)
@@ -190,60 +197,96 @@ func TestServeBadPTR(t *testing.T) {
 	res := resolver.NewResolver()
 	cfg := &config{logQueriesFlag: true, synthesizeFlag: true}
 	server := newServer(cfg, database.NewGetter(), res, "", "")
-	a1 := &delegation.Authority{Domain: "misc.example.net."}
-	a2 := &delegation.Authority{Domain: "f.f.f.f.d.2.d.f.ip6.arpa."}
-	a3 := &delegation.Authority{Domain: "2.0.192.in-addr.arpa."}
+	a1 := &authority{forward: true}
+	a1.Domain = "misc.example.net."
+	a2 := &authority{}
+	a2.Domain = "f.f.f.f.d.2.d.f.ip6.arpa."
+	var err error
+	_, a2.cidr, err = net.ParseCIDR("fd2d:ffff::/64")
+	if err != nil {
+		t.Fatal("Setup Error", err)
+	}
+	a3 := &authority{}
+	a3.Domain = "2.0.192.in-addr.arpa."
+	_, a3.cidr, err = net.ParseCIDR("192.0.2.0/24")
+	if err != nil {
+		t.Fatal("Setup Error", err)
+	}
 
 	var auths authorities
+	a1.synthesizeSOA("example.net.", 60)
+	a2.synthesizeSOA("example.net.", 60)
+	a3.synthesizeSOA("example.net.", 60)
 	auths.append(a1)
 	auths.append(a2)
 	auths.append(a3)
+	auths.sort()
 	server.setMutables("", nil, auths)
 
-	query := setQuestion(dns.ClassINET, dns.TypePTR, "0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.f.f.f.f.d.2.d.f.ip6.arpa.")
+	query := setQuestion(dns.ClassINET, dns.TypePTR, // Truncated should return NoError and empty Answer
+		"0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.f.f.f.f.d.2.d.f.ip6.arpa.")
+
 	server.ServeDNS(wtr, query)
 	resp := wtr.Get()
 	if resp == nil {
-		t.Error("Setup error - No response to PTR query")
-	} else if resp.Rcode != dns.RcodeNameError {
-		t.Error("Expected RcodeNameError, not", dnsutil.RcodeToString(resp.Rcode))
+		t.Fatal("Setup error - No response to PTR query")
 	}
 
+	if resp.Rcode != dns.RcodeSuccess || len(resp.Answer) != 0 {
+		t.Error("Expected RcodeSuccess and Answer=0, not", dnsutil.RcodeToString(resp.Rcode), len(resp.Answer))
+	}
+	exp := `ru=ne q=PTR/0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.f.f.f.f.d.2.d.f.ip6.arpa. s=127.0.0.2:4056 id=1 h=U sz=203/1232 C=0/1/1 Truncated
+`
+	got := out.String()
+	if exp != got {
+		t.Error("TestServeBadPTR log mismatch \n Got:", got, "Exp:", exp, resp)
+	}
+
+	out.Reset()
+	query = setQuestion(dns.ClassINET, dns.TypePTR, // Out-of-bailiwick
+		"1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.e.f.f.f.d.2.d.f.ip6.arpa.")
+
+	server.ServeDNS(wtr, query)
+	resp = wtr.Get()
+	if resp == nil {
+		t.Error("Setup error - No response to PTR query")
+	} else if resp.Rcode != dns.RcodeRefused {
+		t.Error("Expected RcodeRefused, not", dnsutil.RcodeToString(resp.Rcode))
+	}
+
+	// Check logging
+	exp = `ru=REFUSED q=PTR/1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.e.f.f.f.d.2.d.f.ip6.arpa. s=127.0.0.2:4056 id=1 h=U sz=101/1232 C=0/0/1 out of bailiwick
+`
+	got = out.String()
+	if exp != got {
+		t.Error("TestServeBadPTR log mismatch \n Got:", got, "Exp:", exp)
+	}
+
+	// No Synth test
+	out.Reset()
 	cfg.synthesizeFlag = false
-	query = setQuestion(dns.ClassINET, dns.TypePTR, "1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.f.f.f.f.d.2.d.f.ip6.arpa")
+	query = setQuestion(dns.ClassINET, dns.TypePTR,
+		"1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.f.f.f.f.d.2.d.f.ip6.arpa.")
+
 	server.ServeDNS(wtr, query)
 	resp = wtr.Get()
 	if resp == nil {
 		t.Error("Setup error - No response to PTR query")
 	} else if resp.Rcode != dns.RcodeNameError {
-		t.Error("Expected RcodeNameError, not", dnsutil.RcodeToString(resp.Rcode))
+		t.Error("Expected NXDOMAIN, not", dnsutil.RcodeToString(resp.Rcode))
 	}
 
 	// Check logging
-	exp := `ru=NXDOMAIN q=PTR/0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.f.f.f.f.d.2.d.f.ip6.arpa. s=127.0.0.2:4056 id=1 h=U sz=130/1232 C=0/1/1
-ru=NXDOMAIN q=PTR/fd2d:ffff::1 s=127.0.0.2:4056 id=1 h=U sz=134/1232 C=0/1/1 No Synth
+	exp = `ru=NXDOMAIN q=PTR/1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.f.f.f.f.d.2.d.f.ip6.arpa. s=127.0.0.2:4056 id=1 h=U sz=207/1232 C=0/1/1 No Synth
 `
-
-	got := out.String()
+	got = out.String()
 	if exp != got {
-		t.Error("TestServeBadPTR log mismatch got:", got, "exp:", exp)
+		t.Error("TestServeBadPTR log mismatch \n Got:", got, "Exp:", exp, resp)
 	}
 }
 
 // NSID, UDPsize and any other corner cases that come to mind
-func TestMisc(t *testing.T) {
-	testCases := []struct {
-		qType uint16
-		qName string
-	}{
-		{dns.TypeA, "192.0.2.misc.example.net."},       // Synthetic hosts are "-" separated
-		{dns.TypeA, "192-0-2.misc.example.net."},       // Malformed ipv4
-		{dns.TypeA, "fd2d::1.misc.example.net."},       // Not ipv4
-		{dns.TypeAAAA, "fd2d::1.misc.example.net."},    // Synthetic hosts are "-" separated
-		{dns.TypeAAAA, "fd2d--1--2.misc.example.net."}, // Malformed ipv6
-		{dns.TypeAAAA, "192-0-2-1.misc.example.net."},  // Not ipv6
-	}
-
+func TestDNSMisc(t *testing.T) {
 	out := &mock.IOWriter{}
 	log.SetOut(out)
 	log.SetLevel(log.MajorLevel)
@@ -254,12 +297,17 @@ func TestMisc(t *testing.T) {
 	cfg := &config{logQueriesFlag: true, chaosFlag: true, synthesizeFlag: true,
 		nsid: nsidAsText, nsidAsHex: nsidAsHex}
 	cfg.generateNSIDOpt()
-	server := newServer(cfg, database.NewGetter(), res, "", "")
+	ar := newAutoReverse(cfg, res)
+	newDB := database.NewDatabase()
+	ar.loadFromChaos(newDB)
+	ar.dbGetter.Replace(newDB)
+	server := newServer(cfg, ar.dbGetter, res, "", "")
 
-	a1 := &delegation.Authority{Domain: "misc.example.net."}
-	var auths authorities
-	auths.append(a1)
-	server.setMutables("", nil, auths)
+	a1 := &authority{}
+	a1.Domain = "misc.example.net."
+	a1.forward = true
+	ar.authorities.append(a1)
+	server.setMutables("", nil, ar.authorities)
 
 	query := setQuestion(dns.ClassCHAOS, dns.TypeTXT, "version.bind.")
 
@@ -311,6 +359,18 @@ func TestMisc(t *testing.T) {
 
 	// Issue invalid forward queries that *look* like they might work.
 
+	testCases := []struct {
+		qType uint16
+		qName string
+	}{
+		{dns.TypeA, "192.0.2.misc.example.net."},       // Synthetic hosts are "-" separated
+		{dns.TypeA, "192-0-2.misc.example.net."},       // Malformed ipv4
+		{dns.TypeA, "fd2d::1.misc.example.net."},       // Not ipv4
+		{dns.TypeAAAA, "fd2d::1.misc.example.net."},    // Synthetic hosts are "-" separated
+		{dns.TypeAAAA, "fd2d--1--2.misc.example.net."}, // Malformed ipv6
+		{dns.TypeAAAA, "192-0-2-1.misc.example.net."},  // Not ipv6
+	}
+
 	for ix, tc := range testCases {
 		query = setQuestion(dns.ClassINET, tc.qType, tc.qName)
 		server.ServeDNS(wtr, query)
@@ -345,7 +405,32 @@ ru=NXDOMAIN q=AAAA/192-0-2-1.misc.example.net. s=127.0.0.2:4056 id=1 h=U sz=88/1
 	}
 }
 
-func TestGoodAnswers(t *testing.T) {
+func TestDNSGoodAnswers(t *testing.T) {
+	out := &mock.IOWriter{}
+	log.SetOut(out)
+	log.SetLevel(log.MajorLevel)
+
+	wtr := &mock.ResponseWriter{}
+	res := resolver.NewResolver()
+	cfg := &config{logQueriesFlag: true, synthesizeFlag: true, delegatedForward: "a.zig.", TTLAsSecs: 3600}
+	ar := newAutoReverse(cfg, res)
+	a1 := &authority{forward: true}
+	a1.Domain = cfg.delegatedForward
+	a2 := &authority{}
+	a2.Domain = "f.f.f.f.d.2.d.f.ip6.arpa."
+	_, a2.cidr, _ = net.ParseCIDR("fd2d:ffff::/64")
+	a3 := &authority{}
+	a3.Domain = "2.0.192.in-addr.arpa."
+	_, a3.cidr, _ = net.ParseCIDR("192.0.2.0/24")
+	ar.authorities.append(a1)
+	ar.authorities.append(a2)
+	ar.authorities.append(a3)
+	newDB := database.NewDatabase()
+	ar.loadFromAuthorities(newDB)
+	ar.dbGetter.Replace(newDB)
+	server := newServer(cfg, ar.dbGetter, res, "", "")
+	server.setMutables("a.zig.", nil, ar.authorities)
+
 	var testCases = []struct {
 		qType  uint16
 		qName  string
@@ -368,25 +453,6 @@ func TestGoodAnswers(t *testing.T) {
 		{dns.TypeAAAA, "fd2d-ffff--f0-0-0-2.a.zig.", newRR("fd2d-ffff--f0-0-0-2.a.zig. IN AAAA fd2d:ffff::f0:0:0:2")},
 	}
 
-	out := &mock.IOWriter{}
-	log.SetOut(out)
-	log.SetLevel(log.MajorLevel)
-
-	wtr := &mock.ResponseWriter{}
-
-	res := resolver.NewResolver()
-	cfg := &config{logQueriesFlag: true, synthesizeFlag: true, delegatedForward: "a.zig.", TTLAsSecs: 3600}
-	server := newServer(cfg, database.NewGetter(), res, "", "")
-	a1 := &delegation.Authority{Domain: cfg.delegatedForward}
-	a2 := &delegation.Authority{Domain: "f.f.f.f.d.2.d.f.ip6.arpa."}
-	a3 := &delegation.Authority{Domain: "2.0.192.in-addr.arpa."}
-	var auths authorities
-	auths.append(a1)
-	auths.append(a2)
-	auths.append(a3)
-
-	server.setMutables("a.zig.", nil, auths)
-
 	for ix, tc := range testCases {
 		query := setQuestion(dns.ClassINET, tc.qType, tc.qName)
 		query.Id = uint16(ix + 10)
@@ -405,7 +471,7 @@ func TestGoodAnswers(t *testing.T) {
 		}
 		ans := resp.Answer[0]
 		if !dnsutil.RRIsEqual(ans, tc.expect) {
-			t.Error(ix, "Wrong PTR returned. Exp", tc.expect, "Got", ans)
+			t.Error(ix, "Wrong PTR returned. \nExp:", tc.expect, "\nGot:", ans)
 		}
 	}
 
@@ -426,7 +492,7 @@ ru=ok q=AAAA/fd2d-ffff--f0-0-0-2.a.zig. s=127.0.0.2:4056 id=17 h=U sz=107/1232 C
 }
 
 // Test that all of the Zone-Of-Authority resources are correctly looked up
-func TestAuthorityLookups(t *testing.T) {
+func TestDNSAuthorityLookups(t *testing.T) {
 	soaTime = time.Unix(1357997531, 0) // Override time.Now() so SOA.Serial is a known value
 
 	// Create out-of-bailiwick and in-bailiwick name servers
@@ -434,22 +500,26 @@ func TestAuthorityLookups(t *testing.T) {
 	ns2, _ := dns.NewRR("autoreverse.example.net. IN NS ns2.autoreverse.example.net")
 	a1, _ := dns.NewRR("ns2.autoreverse.example.net IN A 192.168.0.1")
 	a2, _ := dns.NewRR("ns2.autoreverse.example.net IN AAAA 2001:db8:7::1")
-	auth := &delegation.Authority{Domain: "example.net.",
-		NS:   []dns.RR{ns1, ns2},
-		A:    []dns.RR{a1},
-		AAAA: []dns.RR{a2}}
+	auth := &authority{forward: true}
+	auth.Domain = "example.net."
+	auth.NS = []dns.RR{ns1, ns2}
+	auth.A = []dns.RR{a1}
+	auth.AAAA = []dns.RR{a2}
 
 	ar := newAutoReverse(nil, nil)
 	ar.cfg.TTLAsSecs = 600
-	ar.synthesizeSOA(auth, "example.net.")
-
+	auth.synthesizeSOA("example.net.", ar.cfg.TTLAsSecs)
+	ar.authorities.append(auth)
+	newDB := database.NewDatabase()
+	ar.loadFromAuthorities(newDB)
+	ar.dbGetter.Replace(newDB)
 	exp := "example.net.	600	IN	SOA	ns1.example.org. hostmaster.example.net. 1357997531 110040 110080 28 9030"
 	got := auth.SOA.String()
 	if exp != got {
 		t.Error("Synthesized SOA mismatch. Got", got, "Expect", exp)
 	}
 
-	server := newServer(&config{}, database.NewGetter(), resolver.NewResolver(), "", "") // Make a skeletal server
+	server := newServer(ar.cfg, ar.dbGetter, resolver.NewResolver(), "", "") // Make a skeletal server
 	server.authorities.append(auth)
 	wtr := &mock.ResponseWriter{}
 
@@ -560,8 +630,11 @@ func TestAuthorityLookups(t *testing.T) {
 	}
 
 	// Test with a minimalist Authority
-	auth = &delegation.Authority{Domain: "example.net.", NS: []dns.RR{ns2}}
-	ar.synthesizeSOA(auth, "example.net")
+	auth = &authority{}
+	auth.Domain = "example.net."
+	auth.NS = []dns.RR{ns2}
+
+	auth.synthesizeSOA("example.net", ar.cfg.TTLAsSecs)
 	server.authorities.slice[0] = auth // Looking inside is a bit of a hack for this test
 
 	q = setQuestion(dns.ClassINET, dns.TypeSOA, "example.net.")
@@ -592,8 +665,8 @@ func TestAuthorityLookups(t *testing.T) {
 	if resp == nil {
 		t.Fatal("Setup failed")
 	}
-	if resp.Rcode != dns.RcodeNameError {
-		t.Error("Expected NXDomain for A lookup. got",
+	if resp.Rcode != dns.RcodeSuccess {
+		t.Error("Expected NoError for A lookup. got",
 			dnsutil.RcodeToString(resp.Rcode), "\n", resp)
 	}
 
@@ -603,13 +676,24 @@ func TestAuthorityLookups(t *testing.T) {
 	if resp == nil {
 		t.Fatal("Setup failed")
 	}
-	if resp.Rcode != dns.RcodeNameError {
-		t.Error("Expected NXDomain for AAAA lookup. got",
+	if resp.Rcode != dns.RcodeSuccess {
+		t.Error("Expected NOError for AAAA lookup. got",
+			dnsutil.RcodeToString(resp.Rcode), "\n", resp)
+	}
+
+	q = setQuestion(dns.ClassINET, dns.TypeNS, "ns1.example.org.")
+	server.ServeDNS(wtr, q)
+	resp = wtr.Get()
+	if resp == nil {
+		t.Fatal("Setup failed")
+	}
+	if resp.Rcode != dns.RcodeRefused {
+		t.Error("Expected Refused for out-of-bailiwick NS lookup. got",
 			dnsutil.RcodeToString(resp.Rcode), "\n", resp)
 	}
 }
 
-func TestCookies(t *testing.T) {
+func TestDNSCookies(t *testing.T) {
 	var testCases = []struct {
 		addQuery bool
 		in, out  string
@@ -632,9 +716,13 @@ func TestCookies(t *testing.T) {
 	wtr := &mock.ResponseWriter{}
 	res := resolver.NewResolver()
 	cfg := &config{logQueriesFlag: true, chaosFlag: true}
-	server := newServer(cfg, database.NewGetter(), res, "", "")
+	ar := newAutoReverse(cfg, res)
+	newDB := database.NewDatabase()
+	ar.loadFromChaos(newDB)
+	ar.dbGetter.Replace(newDB)
+	server := newServer(cfg, ar.dbGetter, res, "", "")
 	var auths authorities
-	server.setMutables("", nil, auths)
+	server.setMutables("a.zig.", nil, auths)
 
 	for ix, tc := range testCases {
 		query := new(dns.Msg)

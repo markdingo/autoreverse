@@ -4,7 +4,8 @@ import (
 	"fmt"
 )
 
-type queryStats struct {
+// qTypeStats is for high activity qTypes: A, AAAA, in-addr.arpa & ip6.arps PTR.
+type qTypeStats struct {
 	queries   int // Type specific query count
 	good      int // Good replies sent back to client
 	answers   int // Total answers sent in all good replies
@@ -12,7 +13,7 @@ type queryStats struct {
 	noSynth   int // Not in DB and not asked to synthesize
 }
 
-func (t *queryStats) add(from *queryStats) {
+func (t *qTypeStats) add(from *qTypeStats) {
 	t.queries += from.queries
 	t.good += from.good
 	t.answers += from.answers
@@ -20,7 +21,7 @@ func (t *queryStats) add(from *queryStats) {
 	t.noSynth += from.noSynth
 }
 
-func (t *queryStats) String() string {
+func (t *qTypeStats) String() string {
 	return fmt.Sprintf("q=%d good=%d(%d) mal=%d nodb=%d",
 		t.queries, t.good, t.answers, t.malformed, t.noSynth)
 }
@@ -83,10 +84,10 @@ func (t *generalStats) String() string {
 
 type serverStats struct {
 	gen         generalStats
-	APtr        queryStats
-	AAAAPtr     queryStats
-	AForward    queryStats
-	AAAAForward queryStats
+	APtr        qTypeStats
+	AAAAPtr     qTypeStats
+	AForward    qTypeStats
+	AAAAForward qTypeStats
 }
 
 func (t *serverStats) add(from *serverStats) {

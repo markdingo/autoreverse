@@ -12,28 +12,23 @@ import (
 	"github.com/miekg/dns"
 )
 
-func TestChaos(t *testing.T) {
-	cfg := &config{logQueriesFlag: true, projectURL: "projectURL", nsid: "nsid1"}
+func TestDNSChaos(t *testing.T) {
+	cfg := &config{logQueriesFlag: true, projectURL: "projectURL",
+		nsid: "nsid1", TTLAsSecs: 60, chaosFlag: true}
 	expect := commonCHAOSPrefix + " " + cfg.projectURL
-	testCases := []struct{ in, out string }{
-		{"version.bind.", expect},
-		{"version.server.", expect},
-		{"authors.bind.", expect},
-		{"hostname.bind.", "nsid1"},
-		{"id.server.", "nsid1"},
-		{"nope", ""},
-	}
-
 	out := &mock.IOWriter{}
 	log.SetOut(out)
 	log.SetLevel(log.MajorLevel)
 
 	wtr := &mock.ResponseWriter{}
-
 	res := resolver.NewResolver()
-	server := newServer(cfg, database.NewGetter(), res, "", "")
+	ar := newAutoReverse(cfg, res)
+	newDB := database.NewDatabase()
+	ar.loadFromChaos(newDB)
+	ar.dbGetter.Replace(newDB)
+	server := newServer(cfg, ar.dbGetter, res, "", "")
 
-	// First try with an invalid type
+	// First try with wrong type
 	query := setQuestion(dns.ClassCHAOS, dns.TypeNS, "version.bind.")
 	server.ServeDNS(wtr, query)
 	resp := wtr.Get()
@@ -45,14 +40,15 @@ func TestChaos(t *testing.T) {
 	}
 
 	// Check error logging
-	exp := "ru=REFUSED q=NS/version.bind. s=127.0.0.2:4056 id=1 h=U sz=41/1232 C=0/0/1 Wrong class CH\n"
+	exp := "ru=REFUSED q=NS/version.bind. s=127.0.0.2:4056 id=1 h=U sz=41/1232 C=0/0/1\n"
 	got := out.String()
 	if exp != got {
-		t.Error("Error log mismatch", got, exp)
+		t.Error("Error log mismatch. \n Got:", got, "Exp:", exp)
 	}
 
 	// Check not chaos flag set
 
+	cfg.chaosFlag = false
 	out.Reset()
 	query = setQuestion(dns.ClassCHAOS, dns.TypeTXT, "version.bind.")
 	query.Id = 2
@@ -62,20 +58,29 @@ func TestChaos(t *testing.T) {
 		t.Fatal("Setup error - No response to chaos query")
 	}
 	if resp.Rcode != dns.RcodeRefused {
-		t.Error("Expected RcodeRefused, not", dnsutil.RcodeToString(wtr.Get().Rcode))
+		t.Error("Expected RcodeRefused, not", dnsutil.RcodeToString(resp.Rcode))
 	}
 
 	// Check error logging
-	exp = "ru=REFUSED q=TXT/version.bind. s=127.0.0.2:4056 id=2 h=U sz=41/1232 C=0/0/1 Wrong class CH\n"
+	exp = "ru=REFUSED q=TXT/version.bind. s=127.0.0.2:4056 id=2 h=U sz=41/1232 C=0/0/1 out of bailiwick\n"
 	got = out.String()
 	if exp != got {
-		t.Error("Error log mismatch", got, exp)
+		t.Error("Error log mismatch \n Got:", got, "Exp:", exp)
 	}
 
 	// Now with flag set
 
 	out.Reset()
 	cfg.chaosFlag = true
+
+	testCases := []struct{ in, out string }{
+		{"version.bind.", expect},
+		{"version.server.", expect},
+		{"authors.bind.", expect},
+		{"hostname.bind.", "nsid1"},
+		{"id.server.", "nsid1"},
+		{"nope", ""},
+	}
 
 	for ix, tc := range testCases {
 		query = setQuestion(dns.ClassCHAOS, dns.TypeTXT, tc.in)
@@ -89,7 +94,7 @@ func TestChaos(t *testing.T) {
 			if len(tc.out) > 0 { // Expect an error if no response expected
 				t.Error(ix,
 					"Expected RcodeSuccess, not",
-					dnsutil.RcodeToString(wtr.Get().Rcode))
+					dnsutil.RcodeToString(resp.Rcode))
 			}
 			continue
 		}
