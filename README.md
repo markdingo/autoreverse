@@ -73,7 +73,7 @@ possible that's already present in the DNS. That means `autoreverse` can start u
 respond to PTR queries with the following invocation:
 
 ```sh
-# autoreverse --forward autoreverse.example.net --reverse 2001:db8::/64
+autoreverse --forward autoreverse.example.net --reverse 2001:db8::/64
 ```
 
 Where `autoreverse.example.net` and `0.0.0.0.0.0.0.0.8.b.d.0.1.0.0.2.ip6.arpa`
@@ -83,12 +83,11 @@ are delegated to the listening addresses().
 If you want to intermingle your own forward names from an existing zone into the PTR
 answers, here is what the invocation might look like:
 
-
 ```sh
-# autoreverse --forward autoreverse.example.com --reverse 2001:db8::/64 \
-              --listen 2001:db8::1                                      \
-              --PTR-deduce file:///etc/nsd/example.net.zone             \
-              --PTR-deduce axfr://a.ns.example.net/example.org
+autoreverse --forward autoreverse.example.com --reverse 2001:db8::/64 \
+            --listen 2001:db8::1                                      \
+            --PTR-deduce file:///etc/nsd/example.net.zone             \
+            --PTR-deduce axfr://a.ns.example.net/example.org
 ```
 
 This invocation results in PTR queries returning matching A, AAAA and CNAME names from the
@@ -103,7 +102,7 @@ Since `autoreverse` relies on pre-existing forward and reverse delegation detail
 deduce its own zone information, the first step is to add those delegation details into
 the DNS. Here's an example of the recommended snippet for your forward zone:
 
-```sh
+```
   $ORIGIN yourdomain.
   ;;
   ;; Start of snippet
@@ -124,9 +123,9 @@ so normally you arrange with them to configure the reverse name server as
 A likely invocation after this setup is something like:
 
 ```sh
-# autoreverse --forward autoreverse.yourdomain           \
-              --listen 2001:db8::1 --listen 192.0.2.53   \
-              --reverse 2001:db8:aa:bb::53/48
+autoreverse --forward autoreverse.yourdomain           \
+            --listen 2001:db8::1 --listen 192.0.2.53   \
+            --reverse 2001:db8:aa:bb::53/48
 ```
 
 and `autoreverse` will figure out the rest and start answering PTR queries.
@@ -165,20 +164,21 @@ successes *and* failures.
 
 ### Compilation From Sources
 
-To fetch, compile and install `autoreverse`, run the following commands:
+To fetch, compile and install `autoreverse`, run the following commands to install
+`autoreverse` into into `/usr/local/sbin`
 
 ```sh
-$ git clone https://github.com/markdingo/autoreverse.git
-$ cd autoreverse
-$ make clean all
-$ sudo make install          # Installs into /usr/local/sbin
+git clone https://github.com/markdingo/autoreverse.git
+cd autoreverse
+make clean all
+sudo make install
 ```
 
 If `git` is unavailable to you, github offers a zip download function on the project page.
 
 To test the installation, run the following commands:
 
-```
+```sh
 /usr/local/sbin/autoreverse -v
 man autoreverse
 ```
