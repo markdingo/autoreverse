@@ -44,7 +44,6 @@ func (t *serveResult) String() string {
 func (t *server) ServeDNS(wtr dns.ResponseWriter, query *dns.Msg) {
 	req := newRequest(query, wtr.RemoteAddr(), t.network)
 	req.stats.gen.queries++
-
 	if t.cfg.logQueriesFlag {
 		defer req.log()
 	}
@@ -65,6 +64,7 @@ func (t *server) ServeDNS(wtr dns.ResponseWriter, query *dns.Msg) {
 
 	if (len(t.cfg.nsid) > 0) && (req.findNSID() != nil) {
 		req.nsidOut = t.cfg.nsidAsHex
+		req.stats.gen.nsid++
 	}
 
 	// We don't take any action based on cookies yet apart from exchange them with
@@ -77,6 +77,7 @@ func (t *server) ServeDNS(wtr dns.ResponseWriter, query *dns.Msg) {
 		if !req.cookieWellFormed { // Specifically this means the OPT is malformed
 			t.serveFormErr(wtr, req)
 			req.addNote("Malformed cookie")
+			req.stats.gen.malformedCookie++
 			return
 		}
 		if !req.validateOrGenerateCookie(t.cookieSecrets, time.Now().Unix()) {
@@ -85,7 +86,6 @@ func (t *server) ServeDNS(wtr dns.ResponseWriter, query *dns.Msg) {
 				req.stats.gen.wrongCookie++
 			}
 		}
-		req.stats.gen.cookie++
 	}
 
 	// Is this a cookie-only request?
@@ -93,6 +93,7 @@ func (t *server) ServeDNS(wtr dns.ResponseWriter, query *dns.Msg) {
 		req.response.SetReply(query)
 		t.writeMsg(wtr, req)
 		req.addNote("Cookie-only query")
+		req.stats.gen.cookieOnly++
 		return
 	}
 
@@ -103,6 +104,7 @@ func (t *server) ServeDNS(wtr dns.ResponseWriter, query *dns.Msg) {
 		req.query.Opcode != dns.OpcodeQuery {
 		t.serveFormErr(wtr, req)
 		req.addNote("Malformed Query")
+		req.stats.gen.badRequest++
 		return
 	}
 
@@ -164,8 +166,10 @@ func (t *server) ServeDNS(wtr dns.ResponseWriter, query *dns.Msg) {
 	// such as NoError cannot be generated properly, so "Refused" is our
 	// get-out-of-jail card.
 	if t.cfg.chaosFlag && req.question.Qclass == dns.ClassCHAOS {
+		req.stats.gen.chaos++
 		if t.serveDatabase(wtr, req) != serveDone {
 			t.serveRefused(wtr, req)
+			req.stats.gen.chaosRefused++
 		}
 		return
 	}
@@ -188,6 +192,7 @@ func (t *server) ServeDNS(wtr dns.ResponseWriter, query *dns.Msg) {
 		t.serveRefused(wtr, req)
 		req.addNote(fmt.Sprintf("Wrong class %s",
 			dnsutil.ClassToString(dns.Class(req.question.Qclass))))
+		req.stats.gen.wrongClass++
 		return
 	}
 
@@ -226,8 +231,16 @@ func (t *server) ServeDNS(wtr dns.ResponseWriter, query *dns.Msg) {
 
 	// Dispatch 6. Database - remember result in case synthesis is not enabled
 	pending := t.serveDatabase(wtr, req)
-	if pending == serveDone {
+	switch pending {
+	case serveDone:
+		req.stats.gen.dbDone++
 		return
+	case NoError:
+		req.stats.gen.dbNoError++
+	case NXDomain:
+		req.stats.gen.dbNXDomain++
+	case FormErr:
+		req.stats.gen.dbFormErr++
 	}
 
 	// Dispatch 7. Synthesis.
@@ -236,12 +249,25 @@ func (t *server) ServeDNS(wtr dns.ResponseWriter, query *dns.Msg) {
 	if t.cfg.synthesizeFlag {
 		if req.auth.forward {
 			pending = t.serveForward(wtr, req)
+			req.stats.gen.synthForward++
 		} else {
 			pending = t.serveReverse(wtr, req)
+			req.stats.gen.synthReverse++
 		}
+		switch pending {
+		case serveDone:
+			req.stats.gen.synthDone++
+		case NoError:
+			req.stats.gen.synthNoError++
+		case NXDomain:
+			req.stats.gen.synthNXDomain++
+		case FormErr:
+			req.stats.gen.synthFormErr++
+		}
+
 	} else {
 		req.addNote("No Synth")
-		// XXXX stats
+		req.stats.gen.noSynth++
 	}
 
 	// Dispatch 8. Pending serveResult
@@ -259,28 +285,25 @@ func (t *server) serveNoError(wtr dns.ResponseWriter, req *request) {
 	req.response.SetRcode(req.query, dns.RcodeSuccess)
 	req.response.Ns = append(req.response.Ns, &req.auth.SOA)
 	t.writeMsg(wtr, req)
-	req.stats.gen.noError++
 }
 
-// I do not know why miekg as a specific function for FormErr and just a generic one for
-// all other returns, but I'll use the specific one just in case there's a good reason.
+// I don't know why miekg has a specific function for FormErr and a generic one for all
+// other returns, but I'll use the specific one just in case there's a good reason beyond
+// an historical artifact.
 func (t *server) serveFormErr(wtr dns.ResponseWriter, req *request) {
 	req.response.SetRcodeFormatError(req.query)
 	t.writeMsg(wtr, req)
-	req.stats.gen.formatError++
 }
 
 func (t *server) serveNXDomain(wtr dns.ResponseWriter, req *request) {
 	req.response.SetRcode(req.query, dns.RcodeNameError)
 	req.response.Ns = append(req.response.Ns, &req.auth.SOA)
 	t.writeMsg(wtr, req)
-	req.stats.gen.nxDomain++
 }
 
 func (t *server) serveRefused(wtr dns.ResponseWriter, req *request) {
 	req.response.SetRcode(req.query, dns.RcodeRefused)
 	t.writeMsg(wtr, req)
-	// XXXX req.stats.gen.refused++
 }
 
 func (t *server) serveDatabase(wtr dns.ResponseWriter, req *request) serveResult {
@@ -308,9 +331,6 @@ func (t *server) serveDatabase(wtr dns.ResponseWriter, req *request) serveResult
 	}
 
 	t.writeMsg(wtr, req)
-	// XXXX Stats fixup
-	// statsp.good++
-	// statsp.answers += len(req.response.Answer)
 
 	return serveDone
 }
@@ -355,9 +375,9 @@ func (t *server) serveForward(wtr dns.ResponseWriter, req *request) serveResult 
 
 	if is4 {
 		return t.serveA(wtr, req)
-	} else {
-		return t.serveAAAA(wtr, req)
 	}
+
+	return t.serveAAAA(wtr, req)
 }
 
 // Expecting 192-0-2-1.$forward. Unlike ipv6, there is no compression of the IP address to
@@ -498,11 +518,13 @@ func (t *server) serveReverse(wtr dns.ResponseWriter, req *request) serveResult 
 	}
 
 	if err != nil { // Reverse IP address could not be inverted from qName
+		statsp.invertError++
 		return NXDomain
 	}
 
 	if truncated { // Mostly well-formed, but incomplete
 		req.addNote("Truncated")
+		statsp.truncated++
 		return NoError
 	}
 

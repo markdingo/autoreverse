@@ -99,12 +99,10 @@ func (t *autoReverse) statsReport(resetCounters bool) {
 	upDuration = upDuration.Round(time.Second)
 	statsDuration = statsDuration.Round(time.Second)
 
-	// Include version with uptime for stats parsers. The presumption is that stats
-	// output will change over release as more is learnt about what's desired. Adding
-	// version is a deterministic way for such parsers to know exactly what to expect.
+	// Include version with output so log parsers can adapt to changes that will inevitably
+	// occur from release to release.
 
-	log.Major("Stats: Uptime ", upDuration,
-		" Stats Time: ", statsDuration, " ", pregen.Version)
+	log.Major("Stats: Uptime ", upDuration, " Interval: ", statsDuration, " ", pregen.Version)
 	log.Major("Stats: Total ", totals.gen.String())
 	log.Major("Stats: A Ptr ", totals.APtr.String())
 	log.Major("Stats: AAAA Ptr ", totals.AAAAPtr.String())
