@@ -197,8 +197,10 @@ func (t *server) ServeDNS(wtr dns.ResponseWriter, query *dns.Msg) {
 	}
 
 	// Dispatch 5. Special Authority Queries
-	// Handle queries which populate Extra RRs or ask for ANY. Otherwise fall thru to
-	// the database lookup which contains regular RRs for the Authority Zone.
+
+	// Handle queries which require special treatment such as populating Extra or
+	// Authority RRs or oddball qTypes. Otherwise fall thru to try serveDatabase which
+	// can server all regular RRs for the Authority Zone.
 	if req.qName == req.auth.Domain {
 		switch req.question.Qtype {
 		case dns.TypeANY:
@@ -244,9 +246,11 @@ func (t *server) ServeDNS(wtr dns.ResponseWriter, query *dns.Msg) {
 	}
 
 	// Dispatch 7. Synthesis.
-	// If synthesize is allowed, the pending results of the database lookup will be
-	// overridden, otherwise they'll stand.
-	if t.cfg.synthesizeFlag {
+
+	// If synthesize is allowed the pending results of the previous call to
+	// serveDatabase() are overridden, otherwise they'll stand. Synthesis is only
+	// allowed if configured *and* if the qName is a child of the Authority.
+	if t.cfg.synthesizeFlag && len(req.qName) > len(req.auth.Domain) {
 		if req.auth.forward {
 			pending = t.serveForward(wtr, req)
 			req.stats.gen.synthForward++
@@ -289,7 +293,7 @@ func (t *server) serveNoError(wtr dns.ResponseWriter, req *request) {
 
 // I don't know why miekg has a specific function for FormErr and a generic one for all
 // other returns, but I'll use the specific one just in case there's a good reason beyond
-// an historical artifact.
+// being an historical artifact.
 func (t *server) serveFormErr(wtr dns.ResponseWriter, req *request) {
 	req.response.SetRcodeFormatError(req.query)
 	t.writeMsg(wtr, req)
