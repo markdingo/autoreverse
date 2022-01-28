@@ -35,8 +35,8 @@ func NewDatabase() *Database {
 	return &Database{cm: make(classMap)}
 }
 
-// Add the RR into the map. Return true if it was added. Return false it's a duplicate or
-// an impossible RR (which should never be the case).
+// AddRR into the map. Return true if it was added. Return false it's a duplicate or an
+// impossible RR (which should never be the case).
 func (t *Database) AddRR(rr dns.RR) bool {
 	qClass := rr.Header().Class
 	qType := rr.Header().Rrtype
@@ -151,6 +151,7 @@ func (t *Database) Count() int {
 	return t.count
 }
 
+// Dump is a test/debug function only.
 func (t *Database) Dump() {
 	fmt.Println("Database Dump", t.count)
 	for ct, parent := range t.cm {

@@ -1,9 +1,10 @@
 /*
 
-The database package provides a hierarchical DNS lookup mechanism. LookupRR() requires a
+Package database provides a hierarchical DNS lookup mechanism. LookupRR() requires a
 class, type and FQDN and returns a set of RRs or an NXDOMAIN indication.
 
-Once the database has been "commited" the database effectively becomes read-only.
+Once the database has been handed to a Getter() only Lookup() calls can be made as there
+is no internal concurrency protection.
 
 Expected usage is:
 

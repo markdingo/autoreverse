@@ -9,6 +9,7 @@ import (
 
 type logLevel int
 
+// Define the valid logLevels which can be set with SetLevel()
 const (
 	SilentLevel logLevel = iota
 	MajorLevel
