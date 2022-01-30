@@ -1,4 +1,6 @@
 # autoreverse Change Log
+  * Don't bother calling synth functions for qName == authority
+  * Adapt stats reporting to new query logic
 ### v1.2.0 -- 2022-01-27
   * Refactor query dispatch logic to take advantage of the tree database
   * Reimplement database as a tree to better distinguish NXDomain vs NOError
