@@ -97,7 +97,11 @@ func (t *server) ServeDNS(wtr dns.ResponseWriter, query *dns.Msg) {
 		return
 	}
 
-	// Subsequent to the weird non-request cookie-request, we only accept "normal" queries
+	// Subsequent to the weird non-request cookie-request, we only accept "normal"
+	// queries. Pretty much all of the following tests are performed by miekg prior to
+	// calling ServeDNS(), but precisely what validation will be performed, is
+	// undocumented and perhaps may vary over time thus the "belts and braces"
+	// approach.
 	if len(req.query.Question) != 1 ||
 		len(req.query.Answer) != 0 ||
 		len(req.query.Ns) != 0 ||
@@ -508,12 +512,18 @@ func (t *server) serveReverse(wtr dns.ResponseWriter, req *request) serveResult 
 		statsp.queries++
 		reverseIPStr = strings.TrimSuffix(req.qName, dnsutil.V6Suffix)
 		ip, truncated, err = dnsutil.InvertPtrToIPv6(reverseIPStr)
+		if truncated {
+			req.stats.gen.truncatedV6++
+		}
 
 	case strings.HasSuffix(req.qName, dnsutil.V4Suffix):
 		statsp = &req.stats.APtr
 		statsp.queries++
 		reverseIPStr = strings.TrimSuffix(req.qName, dnsutil.V4Suffix)
 		ip, truncated, err = dnsutil.InvertPtrToIPv4(reverseIPStr)
+		if truncated {
+			req.stats.gen.truncatedV4++
+		}
 
 	default: // Unexpected suffix - Dispatcher should not have let this in
 		log.Major("Danger:Dispatcher should never let in ", req.qName)
