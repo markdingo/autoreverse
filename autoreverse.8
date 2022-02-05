@@ -71,8 +71,8 @@ of
 .Nm
 in that it
 .Em never
-requires configuration material which duplicates that already present in the DNS. This
-approach is suggested in rfc8501, Section 2.5
+requires configuration material which duplicates that already present in the DNS.
+This approach is suggested in rfc8501, Section 2.5
 .Sy [RFC8501] .
 .Pp
 While
@@ -106,7 +106,6 @@ listening addresses(s).
 That's it! That's all that's needed to serve your reverse and matching
 forward queries.
 .Ss OPTIONS
-.Pp
 Documentation Options are:
 .Bl -tag -width indent
 .It Fl h | -help
@@ -167,8 +166,8 @@ zones.
 .Pp
 .Sy CNAME RRs
 are resolved while loading zones, thus if a CNAME resolves to an in-bailiwick reverse
-address it's included as a preferred response to PTR queries. A classic use of this is
-when you have a CNAME to a
+address it's included as a preferred response to PTR queries.
+A classic use of this is when you have a CNAME to a
 .Sy RIPE
 Atlas probe such as:
 .Pp
@@ -267,7 +266,8 @@ problems with chroot and friends are exposed at start up.
 The forward zone to discover and serve.
 Also used as the suffix domain in
 .Sy PTR
-responses. This zone
+responses.
+This zone
 .Em must
 be delegated to an
 .Nm
@@ -536,9 +536,9 @@ will not match those sent by
 .Nm
 which means clients will see
 .Sy two
-DNS Cookies from the same server IP address. Since clients only retain the most recent DNS
-Cookie they are likely to send back the wrong one when sending queries which are sometimes
-answered by
+DNS Cookies from the same server IP address.
+Since clients only retain the most recent DNS Cookie they are likely to send back the
+wrong one when sending queries which are sometimes answered by
 .Nm
 and other times answered by the
 .Ar auth-server .
@@ -837,7 +837,7 @@ This table shows the average results across multiple runs:
 .\" The white spaces in Platform and OS are needed for the pdf output. Having said
 .\" that, mandoc does not generate Ellipses correctly with pdf output, so...
 .
-.Bl -column -offset indent ".Sy Platform    " ".Sy OS          " ".Sy Queries/s" ".Sy Memory"
+.Bl -column ".Sy Platform    " ".Sy OS          " ".Sy Queries/s" ".Sy Memory"
 .It Sy Platform Ta Sy OS Ta Sy Queries/s Ta Sy Memory
 .It Li Pi4 (arm64) Ta Fx 13.0 Ta 18,112 Ta 17MB
 .It Li i5-6260U (x64) Ta Debian 5.10 Ta 82,211 Ta 18MB
@@ -858,7 +858,7 @@ during these tests but it was otherwise a normal invocation.
 .
 .\" Was .Bd -literal -offset indent ... .Ed
 .
-.Bl -column -offset indent ".Sy Project" ".Sy Description      " .Sy Link"
+.Bl -column ".Sy Project" ".Sy Description      " ".Sy Link"
 .It Li autoreverse Ta Project Home Page Ta https://github.com/markdingo/autoreverse
 .It Li [dns-oarc] Ta dnsperf Ta https://www.dns-oarc.net/tools/dnsperf
 .It Li [golang] Ta The go language Ta https://go.dev
@@ -899,4 +899,3 @@ has no clue about
 .Pp
 As always, any bugs or feedback should be directed to the project page at
 https://github.com/markdingo/autoreverse
-
