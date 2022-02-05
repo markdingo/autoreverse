@@ -223,65 +223,53 @@ func TestDNSServeBadPTR(t *testing.T) {
 	auths.sort()
 	server.setMutables("", nil, auths)
 
-	query := setQuestion(dns.ClassINET, dns.TypePTR, // Truncated should return NoError and empty Answer
-		"0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.f.f.f.f.d.2.d.f.ip6.arpa.")
+	testCases := []struct {
+		qType   uint16
+		qName   string
+		synth   bool
+		rCode   int
+		answers int
+		log     string
+	}{
+		{dns.TypePTR, "0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.f.f.f.f.d.2.d.f.ip6.arpa.", true,
+			dns.RcodeSuccess, 0, // First two nibbles missing (truncated) should return NoError and empty Answer
+			"ru=ne q=PTR/0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.f.f.f.f.d.2.d.f.ip6.arpa. " +
+				"s=127.0.0.2:4056 id=1 h=U sz=203/1232 C=0/1/1 Truncated\n"},
 
-	server.ServeDNS(wtr, query)
-	resp := wtr.Get()
-	if resp == nil {
-		t.Fatal("Setup error - No response to PTR query")
+		{dns.TypePTR, "1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.e.f.f.f.d.2.d.f.ip6.arpa.", true,
+			dns.RcodeRefused, 0, // Out-of-bailiwick
+			"ru=REFUSED q=PTR/1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.e.f.f.f.d.2.d.f.ip6.arpa. " +
+				"s=127.0.0.2:4056 id=1 h=U sz=101/1232 C=0/0/1 out of bailiwick\n"},
+
+		{dns.TypePTR, "1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.f.f.f.f.d.2.d.f.ip6.arpa.", false,
+			dns.RcodeNameError, 0, // No Synth
+			"ru=NXDOMAIN q=PTR/1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.f.f.f.f.d.2.d.f.ip6.arpa. " +
+				"s=127.0.0.2:4056 id=1 h=U sz=207/1232 C=0/1/1 No Synth\n"},
 	}
 
-	if resp.Rcode != dns.RcodeSuccess || len(resp.Answer) != 0 {
-		t.Error("Expected RcodeSuccess and Answer=0, not", dnsutil.RcodeToString(resp.Rcode), len(resp.Answer))
-	}
-	exp := `ru=ne q=PTR/0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.f.f.f.f.d.2.d.f.ip6.arpa. s=127.0.0.2:4056 id=1 h=U sz=203/1232 C=0/1/1 Truncated
-`
-	got := out.String()
-	if exp != got {
-		t.Error("TestServeBadPTR log mismatch \n Got:", got, "Exp:", exp, resp)
-	}
+	for ix, tc := range testCases {
+		query := setQuestion(dns.ClassINET, tc.qType, tc.qName)
+		out.Reset()
+		cfg.synthesizeFlag = tc.synth
 
-	out.Reset()
-	query = setQuestion(dns.ClassINET, dns.TypePTR, // Out-of-bailiwick
-		"1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.e.f.f.f.d.2.d.f.ip6.arpa.")
+		server.ServeDNS(wtr, query)
+		resp := wtr.Get()
+		if resp == nil {
+			t.Fatal(ix, "Setup error - No response to PTR query")
+		}
 
-	server.ServeDNS(wtr, query)
-	resp = wtr.Get()
-	if resp == nil {
-		t.Error("Setup error - No response to PTR query")
-	} else if resp.Rcode != dns.RcodeRefused {
-		t.Error("Expected RcodeRefused, not", dnsutil.RcodeToString(resp.Rcode))
-	}
-
-	// Check logging
-	exp = `ru=REFUSED q=PTR/1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.e.f.f.f.d.2.d.f.ip6.arpa. s=127.0.0.2:4056 id=1 h=U sz=101/1232 C=0/0/1 out of bailiwick
-`
-	got = out.String()
-	if exp != got {
-		t.Error("TestServeBadPTR log mismatch \n Got:", got, "Exp:", exp)
-	}
-
-	// No Synth test
-	out.Reset()
-	cfg.synthesizeFlag = false
-	query = setQuestion(dns.ClassINET, dns.TypePTR,
-		"1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.f.f.f.f.d.2.d.f.ip6.arpa.")
-
-	server.ServeDNS(wtr, query)
-	resp = wtr.Get()
-	if resp == nil {
-		t.Error("Setup error - No response to PTR query")
-	} else if resp.Rcode != dns.RcodeNameError {
-		t.Error("Expected NXDOMAIN, not", dnsutil.RcodeToString(resp.Rcode))
-	}
-
-	// Check logging
-	exp = `ru=NXDOMAIN q=PTR/1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.f.f.f.f.d.2.d.f.ip6.arpa. s=127.0.0.2:4056 id=1 h=U sz=207/1232 C=0/1/1 No Synth
-`
-	got = out.String()
-	if exp != got {
-		t.Error("TestServeBadPTR log mismatch \n Got:", got, "Exp:", exp, resp)
+		if resp.Rcode != tc.rCode || len(resp.Answer) != tc.answers {
+			t.Errorf("%d Expected %s and answers=%d, not %s and %d",
+				ix, dnsutil.RcodeToString(tc.rCode), tc.answers, dnsutil.RcodeToString(resp.Rcode), len(resp.Answer))
+			continue
+		}
+		if len(tc.log) == 0 { // Compare log message?
+			continue
+		}
+		got := out.String()
+		if tc.log != got {
+			t.Error(ix, "Log mismatch.\n Got:", got, "Exp:", tc.log)
+		}
 	}
 }
 
