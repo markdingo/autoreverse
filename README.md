@@ -30,6 +30,7 @@ the [FAQ](FAQ.md). The technically inclined may wish to download the
 [![Build Status](https://github.com/markdingo/autoreverse/actions/workflows/build.yml/badge.svg)](https://github.com/markdingo/autoreverse/actions/workflows/build.yml)
 [![Test Status](https://github.com/markdingo/autoreverse/actions/workflows/test.yml/badge.svg)](https://github.com/markdingo/autoreverse/actions/workflows/test.yml)
 [![codecov](https://codecov.io/gh/markdingo/autoreverse/branch/main/graph/badge.svg?token=211OVOI2AV)](https://codecov.io/gh/markdingo/autoreverse)
+[![CodeQL](https://github.com/markdingo/autoreverse/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/markdingo/autoreverse/actions/workflows/codeql-analysis.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/markdingo/autoreverse)](https://goreportcard.com/report/github.com/markdingo/autoreverse)
 [![Go Reference](https://pkg.go.dev/badge/github.com/markdingo/autoreverse.svg)](https://pkg.go.dev/github.com/markdingo/autoreverse)
 
