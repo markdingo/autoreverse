@@ -18,15 +18,15 @@ PREGEN=pregen/version.go pregen/autoreverse.8
 help:
 	@echo
 	@echo Make targets for "'autoreverse'":
-	@echo "  Local targets: 'clean', 'all' and 'install'"
+	@echo "	 Local targets: 'clean', 'all' and 'install'"
 	@echo
-	@echo "  Cross-platform targets:"
-	@echo "    'mips' - Mikrotik Router Boards"
-	@echo "    'mips64' - Ubiquiti Edge Router series"
-	@echo "    'armv71' - 32-bit Raspberry Pi3/Pi-hole, ASUS RT-AX55"
-	@echo "    'armv8' - 64-bit Raspberry Pi4/Pi-hole"
+	@echo "	 Cross-platform targets:"
+	@echo "	   'mips' - Mikrotik Router Boards"
+	@echo "	   'mips64' - Ubiquiti Edge Router series"
+	@echo "	   'armv71' - 32-bit Raspberry Pi3/Pi-hole, ASUS RT-AX55"
+	@echo "	   'armv8' - 64-bit Raspberry Pi4/Pi-hole"
 	@echo
-	@echo "  Cross-platform Windows targets: 'windowsamd64' and 'windows386'"
+	@echo "	 Cross-platform Windows targets: 'windowsamd64' and 'windows386'"
 	@echo
 
 all: $(ALL)
@@ -45,6 +45,7 @@ race: Makefile $(ARPATH)/*.go $(ALLPKGS) $(PREGEN)
 .PHONY: vet
 vet:
 	go vet ./...
+	mandoc -Tlint autoreverse.8; exit 0
 
 .PHONY: install
 install: $(ARCMD)
