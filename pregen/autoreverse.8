@@ -5,7 +5,7 @@
 .Nm autoreverse
 .Nd a minimalist-configuration reverse DNS name server
 .Sh SYNOPSIS
-.Nm autoreverse
+.Nm
 .Fl h | -help | -manpage | v | -version
 .Nm
 .Fl -forward Ar zone-name | Fl -local-forward Ar zone-name
@@ -42,7 +42,6 @@ The
 symbol indicates options which can be specified multiple times.
 .
 .Sh DESCRIPTION
-.
 .Nm
 is a specialized authoritative DNS server whose goal is to make it as easy as possible to
 auto-answer reverse queries without ever requiring reverse zone files.
@@ -617,7 +616,7 @@ must start as root for this option to succeed.
 .Ss SIGNALS
 .Nm
 responds to the following signals:
-.Bl -column -offset indent ".Sy Signal" ".Sy Description"
+.Bl -column ".Sy Signal" ".Sy Description"
 .It Li SIGHUP Ta Reload all zones specified with Fl -PTR-deduce
 .It Li SIGQUIT Ta Produce a stack dump and exit
 .It Li SIGINT Ta Initiate shutdown
@@ -667,6 +666,7 @@ With that information
 walks and probes the global DNS to glean delegation details to create its
 .Sy Zones of Authority
 to serve.
+.
 .Sh IMPLEMENTATION NOTES
 .Nm
 starts at one label up from the
@@ -794,6 +794,7 @@ queries with:
   6.0.0. ... 8.b.d.0.1.0.0.2.ip6.arpa. 60 IN PTR 2001-db8-0-0-0-0-0-6.autoreverse.yourdomain.
   ...
 .Ed
+.
 .Sh EXAMPLES
 Few use-cases require such a complicated invocation, but this example demonstrates less
 common features:
@@ -821,6 +822,7 @@ Finally, out-of-bailiwick queries are passed thru to a name server presumed to b
 listening on 127.0.0.1 which allows
 .Nm
 to proxy or answer all inbound queries.
+.
 .Sh PERFORMANCE
 While
 .Nm
@@ -867,6 +869,7 @@ during these tests but it was otherwise a normal invocation.
 .It Li [RFC7873] Ta DNS Cookies Ta https://datatracker.ietf.org/doc/html/rfc7873
 .It Li [RFC8501] Ta Reverse DNS in IPv6 Ta https://datatracker.ietf.org/doc/html/rfc8501#section-2.5
 .El
+.
 .Sh FUTURE
 .Ss Fl -cache-directory Ar path
 Relying on access to the global DNS during start-up may cause difficulties in some
@@ -892,6 +895,12 @@ Importantly, they also supported free reverse delegation to home and small busin
 accounts which is where
 .Nm
 comes in handy.
+.
+.Sh AUTHORS
+.Nm
+and this manual page were written by
+.An Mark Delany .
+.
 .Sh BUGS
 .Nm
 has no clue about
