@@ -476,27 +476,27 @@ func (t *server) serveAAAA(wtr dns.ResponseWriter, req *request) serveResult {
 }
 
 // The domain is a known reverse domain which means that a well formed query should be a
-// PTR query such as:
+// query such as:
 //
 // dig -t $qType 168.192.in-addr.arpa.
 // dig -t $qType 1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa.
 //
+// An invertible, but truncated IP is of the form:
+//
+// dig -t $qType 0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa.
+//
 // As with serveForward() most of this code is dealing with malformed queries and
-// determine what the correct response is. E.g. chopping a few nibbles off the front of an
-// ip6.arpa query can easily still be in-bailiwick resulting in a NOError whereas the same
-// thing for in-addpr.arpa will almost certainly be NXDomain.
+// determining what the correct response is. E.g. chopping a few nibbles off the front of
+// an ip6.arpa query can easily still be in-bailiwick resulting in NOError whereas the
+// same thing for in-addpr.arpa will almost certainly be NXDomain.
 //
-// Since the qName is known to be in-bailiwick of one of our reverse authorities, the
-// range of possibilities are:
+// Since qName is known to be in-bailiwick of a reverse authority and since this function
+// is called *after* database lookup attempts, cases to handle are:
 //
-// 1. Well formed reverse which matches the qType - serve the synth answer
-// 2. Well formed reverse which other qType - serve NoError
-// 3. It's a truncated, but otherwise a well formed reverse - serve NoError
-// 4. Malformed reverse such as impossible to invert characters - serve NXDomain
-//
-// By "well formed" and "malformed" we mean a qName which cannot be inverted back to an IP
-// address. This simply makes the query effectively outside any zone we are authoritative
-// for, it does not mean FormErr in the DNS sense. This malformed results in NXDomain.
+// 1. Uninvertible IPs such as those with impossible hex characters - serve NXDomain
+// 2. An invertible, but truncated IP - serve NoError
+// 3. An invertible IP with $qType!=PTR - serve NoError
+// 4. An invertible IP with $qType=PTR - serve the synth answer
 func (t *server) serveReverse(wtr dns.ResponseWriter, req *request) serveResult {
 	var (
 		reverseIPStr string
@@ -531,20 +531,26 @@ func (t *server) serveReverse(wtr dns.ResponseWriter, req *request) serveResult 
 		return FormErr
 	}
 
-	if err != nil { // Reverse IP address could not be inverted from qName
+	if err != nil { // Case 1: qName contains uninvertible IP
 		statsp.invertError++
 		return NXDomain
 	}
 
-	if truncated { // Mostly well-formed, but incomplete
+	if truncated { // Case 2: Mostly well-formed, but incomplete
 		req.addNote("Truncated")
 		statsp.truncated++
 		return NoError
 	}
 
 	req.logQName = ip.String() // Log a more compact variant
+
+	if req.question.Qtype != dns.TypePTR { // Case 3: Invertible, but not a PTR
+		req.addNote("Not PTR")
+		return NoError
+	}
+
+	req.addNote("Synth") // Case 4: Synthesize
 	ptr := dnsutil.SynthesizePTR(req.qName, req.mutables.ptrSuffix, ip)
-	req.addNote("Synth")
 	req.response.SetReply(req.query)
 	ptr.Hdr.Ttl = t.cfg.TTLAsSecs
 	req.response.Answer = append(req.response.Answer, ptr)

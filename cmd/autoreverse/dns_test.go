@@ -229,22 +229,31 @@ func TestDNSServeBadPTR(t *testing.T) {
 		synth   bool
 		rCode   int
 		answers int
+		auths   int
 		log     string
 	}{
+		{dns.TypePTR, "0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.f.f.f.f.d.2.d.f.ip6.arpa.", true,
+			dns.RcodeSuccess, 1, 0, // Baseline good response
+			"ru=ok q=PTR/fd2d:ffff:: s=127.0.0.2:4056 id=1 h=U sz=197/1232 C=1/0/1 Synth\n"},
+
 		{dns.TypePTR, "0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.f.f.f.f.d.2.d.f.ip6.arpa.", true,
-			dns.RcodeSuccess, 0, // First two nibbles missing (truncated) should return NoError and empty Answer
+			dns.RcodeSuccess, 0, 1, // First two nibbles missing (truncated) should return NoError, empty Answer and SOA
 			"ru=ne q=PTR/0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.f.f.f.f.d.2.d.f.ip6.arpa. " +
 				"s=127.0.0.2:4056 id=1 h=U sz=203/1232 C=0/1/1 Truncated\n"},
 
 		{dns.TypePTR, "1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.e.f.f.f.d.2.d.f.ip6.arpa.", true,
-			dns.RcodeRefused, 0, // Out-of-bailiwick
+			dns.RcodeRefused, 0, 0, // Out-of-bailiwick
 			"ru=REFUSED q=PTR/1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.e.f.f.f.d.2.d.f.ip6.arpa. " +
 				"s=127.0.0.2:4056 id=1 h=U sz=101/1232 C=0/0/1 out of bailiwick\n"},
 
 		{dns.TypePTR, "1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.f.f.f.f.d.2.d.f.ip6.arpa.", false,
-			dns.RcodeNameError, 0, // No Synth
+			dns.RcodeNameError, 0, 1, // No Synth, but in-bailiwick, not alternative answers so SOA
 			"ru=NXDOMAIN q=PTR/1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.f.f.f.f.d.2.d.f.ip6.arpa. " +
 				"s=127.0.0.2:4056 id=1 h=U sz=207/1232 C=0/1/1 No Synth\n"},
+
+		{dns.TypeA, "0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.f.f.f.f.d.2.d.f.ip6.arpa.", true,
+			dns.RcodeSuccess, 0, 1, // Baseline query with wrong qType
+			"ru=ne q=A/fd2d:ffff:: s=127.0.0.2:4056 id=1 h=U sz=207/1232 C=0/1/1 Not PTR\n"},
 	}
 
 	for ix, tc := range testCases {
@@ -258,9 +267,10 @@ func TestDNSServeBadPTR(t *testing.T) {
 			t.Fatal(ix, "Setup error - No response to PTR query")
 		}
 
-		if resp.Rcode != tc.rCode || len(resp.Answer) != tc.answers {
-			t.Errorf("%d Expected %s and answers=%d, not %s and %d",
-				ix, dnsutil.RcodeToString(tc.rCode), tc.answers, dnsutil.RcodeToString(resp.Rcode), len(resp.Answer))
+		if resp.Rcode != tc.rCode || len(resp.Answer) != tc.answers || len(resp.Ns) != tc.auths {
+			t.Errorf("%d Expected %s, answers=%d and auths=%d, not %s, %d and %d",
+				ix, dnsutil.RcodeToString(tc.rCode), tc.answers, tc.auths,
+				dnsutil.RcodeToString(resp.Rcode), len(resp.Answer), len(resp.Ns))
 			continue
 		}
 		if len(tc.log) == 0 { // Compare log message?

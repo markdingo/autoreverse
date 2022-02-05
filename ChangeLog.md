@@ -1,4 +1,5 @@
 # autoreverse Change Log
+  * Add missing qType=PTR test to synth checks
   * Don't bother calling synth functions for qName == authority
   * Adapt stats reporting to new query logic
 ### v1.2.0 -- 2022-01-27
