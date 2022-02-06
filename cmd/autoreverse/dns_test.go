@@ -240,7 +240,7 @@ func TestDNSServeBadPTR(t *testing.T) {
 		{dns.TypePTR, "0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.f.f.f.f.d.2.d.f.ip6.arpa.", true,
 			dns.RcodeSuccess, 0, 1, // First two nibbles missing (truncated) should return NoError, empty Answer and SOA
 			"ru=ne q=PTR/0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.f.f.f.f.d.2.d.f.ip6.arpa. " +
-				"s=127.0.0.2:4056 id=1 h=U sz=203/1232 C=0/1/1 Truncated\n"},
+				"s=127.0.0.2:4056 id=1 h=U sz=203/1232 C=0/1/1 Trunc-qmin\n"},
 
 		{dns.TypePTR, "1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.e.f.f.f.d.2.d.f.ip6.arpa.", true,
 			dns.RcodeRefused, 0, 0, // Out-of-bailiwick

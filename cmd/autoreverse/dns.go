@@ -495,7 +495,7 @@ func (t *server) serveAAAA(wtr dns.ResponseWriter, req *request) serveResult {
 // is called *after* database lookup attempts, cases to handle are:
 //
 // 1. Uninvertible IPs such as those with impossible hex characters - serve NXDomain
-// 2. An invertible, but truncated IP - serve NoError
+// 2. An invertible, but truncated IP - serve NoError - most likely qname minimization probe
 // 3. An invertible IP with $qType!=PTR - serve NoError
 // 4. An invertible IP with $qType=PTR - serve the synth answer
 func (t *server) serveReverse(wtr dns.ResponseWriter, req *request) serveResult {
@@ -537,8 +537,8 @@ func (t *server) serveReverse(wtr dns.ResponseWriter, req *request) serveResult 
 		return NXDomain
 	}
 
-	if truncated { // Case 2: Mostly well-formed, but incomplete
-		req.addNote("Truncated")
+	if truncated { // Case 2: Well-formed, but incomplete - qname minimization?
+		req.addNote("Trunc-qmin")
 		statsp.truncated++
 		return NoError
 	}
