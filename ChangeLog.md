@@ -1,4 +1,5 @@
 # autoreverse Change Log
+  * Remove compact logging - it's confusing and doesn't save much
   * Add missing qType=PTR test to synth checks
   * Don't bother calling synth functions for qName == authority
   * Adapt stats reporting to new query logic

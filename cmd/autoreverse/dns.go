@@ -57,7 +57,7 @@ func (t *server) ServeDNS(wtr dns.ResponseWriter, query *dns.Msg) {
 	if len(req.query.Question) > 0 {
 		req.question = req.query.Question[0]           // Populate early for logger
 		req.qName = strings.ToLower(req.question.Name) // Normalize
-		req.logQName = req.qName                       // Can override with compact qName
+		req.logQName = req.qName                       // Can override
 	}
 
 	req.opt = req.query.IsEdns0() // Extract Opt values nice and early
@@ -239,6 +239,7 @@ func (t *server) ServeDNS(wtr dns.ResponseWriter, query *dns.Msg) {
 	pending := t.serveDatabase(wtr, req)
 	switch pending {
 	case serveDone:
+		req.addNote("DB")
 		req.stats.gen.dbDone++
 		return
 	case NoError:
@@ -541,8 +542,6 @@ func (t *server) serveReverse(wtr dns.ResponseWriter, req *request) serveResult 
 		statsp.truncated++
 		return NoError
 	}
-
-	req.logQName = ip.String() // Log a more compact variant
 
 	if req.question.Qtype != dns.TypePTR { // Case 3: Invertible, but not a PTR
 		req.addNote("Not PTR")

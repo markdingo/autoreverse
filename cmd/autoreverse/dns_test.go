@@ -234,7 +234,8 @@ func TestDNSServeBadPTR(t *testing.T) {
 	}{
 		{dns.TypePTR, "0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.f.f.f.f.d.2.d.f.ip6.arpa.", true,
 			dns.RcodeSuccess, 1, 0, // Baseline good response
-			"ru=ok q=PTR/fd2d:ffff:: s=127.0.0.2:4056 id=1 h=U sz=197/1232 C=1/0/1 Synth\n"},
+			"ru=ok q=PTR/0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.f.f.f.f.d.2.d.f.ip6.arpa. " +
+				"s=127.0.0.2:4056 id=1 h=U sz=197/1232 C=1/0/1 Synth\n"},
 
 		{dns.TypePTR, "0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.f.f.f.f.d.2.d.f.ip6.arpa.", true,
 			dns.RcodeSuccess, 0, 1, // First two nibbles missing (truncated) should return NoError, empty Answer and SOA
@@ -253,7 +254,8 @@ func TestDNSServeBadPTR(t *testing.T) {
 
 		{dns.TypeA, "0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.f.f.f.f.d.2.d.f.ip6.arpa.", true,
 			dns.RcodeSuccess, 0, 1, // Baseline query with wrong qType
-			"ru=ne q=A/fd2d:ffff:: s=127.0.0.2:4056 id=1 h=U sz=207/1232 C=0/1/1 Not PTR\n"},
+			"ru=ne q=A/0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.f.f.f.f.d.2.d.f.ip6.arpa. " +
+				"s=127.0.0.2:4056 id=1 h=U sz=207/1232 C=0/1/1 Not PTR\n"},
 	}
 
 	for ix, tc := range testCases {
@@ -433,22 +435,37 @@ func TestDNSGoodAnswers(t *testing.T) {
 		qType  uint16
 		qName  string
 		expect dns.RR
+		log    string
 	}{
 		{dns.TypePTR, "1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.f.f.f.f.d.2.d.f.ip6.arpa.",
-			newRR("1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.f.f.f.f.d.2.d.f.ip6.arpa. IN PTR fd2d-ffff--1.a.zig.")},
+			newRR("1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.f.f.f.f.d.2.d.f.ip6.arpa. IN PTR fd2d-ffff--1.a.zig."),
+			"ru=ok q=PTR/1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.f.f.f.f.d.2.d.f.ip6.arpa. " +
+				"s=127.0.0.2:4056 id=10 h=U sz=205/1232 C=1/0/1 Synth\n"},
+
 		{dns.TypePTR, "2.0.0.0.0.0.0.0.0.0.0.0.0.f.0.0.0.0.0.0.0.0.0.0.f.f.f.f.d.2.d.f.ip6.arpa.",
-			newRR("2.0.0.0.0.0.0.0.0.0.0.0.0.f.0.0.0.0.0.0.0.0.0.0.f.f.f.f.d.2.d.f.ip6.arpa. IN PTR fd2d-ffff--f0-0-0-2.a.zig.")},
+			newRR("2.0.0.0.0.0.0.0.0.0.0.0.0.f.0.0.0.0.0.0.0.0.0.0.f.f.f.f.d.2.d.f.ip6.arpa. IN PTR fd2d-ffff--f0-0-0-2.a.zig."),
+			"ru=ok q=PTR/2.0.0.0.0.0.0.0.0.0.0.0.0.f.0.0.0.0.0.0.0.0.0.0.f.f.f.f.d.2.d.f.ip6.arpa. " +
+				"s=127.0.0.2:4056 id=11 h=U sz=212/1232 C=1/0/1 Synth\n"},
 
 		{dns.TypePTR, "1.2.0.192.in-addr.arpa.",
-			newRR("1.2.0.192.in-addr.arpa. IN PTR 192-0-2-1.a.zig.")},
+			newRR("1.2.0.192.in-addr.arpa. IN PTR 192-0-2-1.a.zig."),
+			"ru=ok q=PTR/1.2.0.192.in-addr.arpa. s=127.0.0.2:4056 id=12 h=U sz=102/1232 C=1/0/1 Synth\n"},
+
 		{dns.TypePTR, "254.2.0.192.in-addr.arpa.",
-			newRR("254.2.0.192.in-addr.arpa. IN PTR 192-0-2-254.a.zig.")},
+			newRR("254.2.0.192.in-addr.arpa. IN PTR 192-0-2-254.a.zig."),
+			"ru=ok q=PTR/254.2.0.192.in-addr.arpa. s=127.0.0.2:4056 id=13 h=U sz=108/1232 C=1/0/1 Synth\n"},
 
-		{dns.TypeA, "192-0-2-1.a.zig.", newRR("192-0-2-1.a.zig. IN A 192.0.2.1")},
-		{dns.TypeA, "192-0-2-254.a.zig.", newRR("192-0-2-254.a.zig. IN A 192.0.2.254")},
+		{dns.TypeA, "192-0-2-1.a.zig.", newRR("192-0-2-1.a.zig. IN A 192.0.2.1"),
+			"ru=ok q=A/192-0-2-1.a.zig. s=127.0.0.2:4056 id=14 h=U sz=75/1232 C=1/0/1\n"},
 
-		{dns.TypeAAAA, "fd2d-ffff--1.a.zig.", newRR("fd2d-ffff--1.a.zig. IN AAAA fd2d:ffff::1")},
-		{dns.TypeAAAA, "fd2d-ffff--f0-0-0-2.a.zig.", newRR("fd2d-ffff--f0-0-0-2.a.zig. IN AAAA fd2d:ffff::f0:0:0:2")},
+		{dns.TypeA, "192-0-2-254.a.zig.", newRR("192-0-2-254.a.zig. IN A 192.0.2.254"),
+			"ru=ok q=A/192-0-2-254.a.zig. s=127.0.0.2:4056 id=15 h=U sz=79/1232 C=1/0/1\n"},
+
+		{dns.TypeAAAA, "fd2d-ffff--1.a.zig.", newRR("fd2d-ffff--1.a.zig. IN AAAA fd2d:ffff::1"),
+			"ru=ok q=AAAA/fd2d-ffff--1.a.zig. s=127.0.0.2:4056 id=16 h=U sz=93/1232 C=1/0/1\n"},
+
+		{dns.TypeAAAA, "fd2d-ffff--f0-0-0-2.a.zig.", newRR("fd2d-ffff--f0-0-0-2.a.zig. IN AAAA fd2d:ffff::f0:0:0:2"),
+			"ru=ok q=AAAA/fd2d-ffff--f0-0-0-2.a.zig. s=127.0.0.2:4056 id=17 h=U sz=107/1232 C=1/0/1\n"},
 	}
 
 	for ix, tc := range testCases {
@@ -470,22 +487,14 @@ func TestDNSGoodAnswers(t *testing.T) {
 		ans := resp.Answer[0]
 		if !dnsutil.RRIsEqual(ans, tc.expect) {
 			t.Error(ix, "Wrong PTR returned. \nExp:", tc.expect, "\nGot:", ans)
+			continue
 		}
-	}
-
-	// Check logs
-	exp := `ru=ok q=PTR/fd2d:ffff::1 s=127.0.0.2:4056 id=10 h=U sz=205/1232 C=1/0/1 Synth
-ru=ok q=PTR/fd2d:ffff::f0:0:0:2 s=127.0.0.2:4056 id=11 h=U sz=212/1232 C=1/0/1 Synth
-ru=ok q=PTR/192.0.2.1 s=127.0.0.2:4056 id=12 h=U sz=102/1232 C=1/0/1 Synth
-ru=ok q=PTR/192.0.2.254 s=127.0.0.2:4056 id=13 h=U sz=108/1232 C=1/0/1 Synth
-ru=ok q=A/192-0-2-1.a.zig. s=127.0.0.2:4056 id=14 h=U sz=75/1232 C=1/0/1
-ru=ok q=A/192-0-2-254.a.zig. s=127.0.0.2:4056 id=15 h=U sz=79/1232 C=1/0/1
-ru=ok q=AAAA/fd2d-ffff--1.a.zig. s=127.0.0.2:4056 id=16 h=U sz=93/1232 C=1/0/1
-ru=ok q=AAAA/fd2d-ffff--f0-0-0-2.a.zig. s=127.0.0.2:4056 id=17 h=U sz=107/1232 C=1/0/1
-`
-	got := out.String()
-	if exp != got {
-		t.Error("PTR log mismatch. Exp", exp, "Got", got)
+		got := out.String()
+		out.Reset()
+		if got != tc.log {
+			t.Error(ix, "Log mismatch. \nExp", tc.log, "\nGot", got)
+			continue
+		}
 	}
 }
 
