@@ -136,15 +136,44 @@ For more details about invocation options, please consult the [manpage](./MANPAG
 
 ## Installation
 
-If not available as a package, `autoreverse` should compile and run on most Unix-like
-systems which support the [go](https://go.dev) compiler. It also cross-compiles and run on
-Windows.
+Regardless of how you compile or install `autoreverse` you'll need a recent version of
+[go](https://golang.org). 1.17 or later is recommended.
 
+### Installation the 'go' way
 
-### Prerequisites
+```sh
+go install https://github.com/markdingo/autoreverse
+```
 
-To compile `autoreverse` you need a recent version of [go](https://golang.org). 1.17 or
-later is recommended.
+should result in an `autoreverse` executable in `$GOPATH/bin` or `$HOME/go/bin`.
+
+While the simplicity of installing the 'go' way has its merits, it
+doesn't install in traditional Unix locations, nor does it install the
+manpage. To do that you'll need to compile and install the 'Unix' way
+
+### Compile and install the 'Unix' way
+
+To fetch, compile and install `autoreverse`, run the following commands to install
+`autoreverse` into `/usr/local/sbin`
+
+```sh
+git clone https://github.com/markdingo/autoreverse.git
+cd autoreverse
+make all
+sudo make install
+```
+
+If `git` is unavailable to you, github offers a zip download function on the project page.
+
+To test the installation, run the following commands:
+
+```sh
+/usr/local/sbin/autoreverse -v
+man autoreverse
+```
+
+All being well, you should see `autoreverse` print version details followed by the start
+of the manpage.
 
 ### Target Systems and cross-compiling
 
@@ -162,30 +191,6 @@ few *prosumer* routers such as Ubiquiti Edge Routers and Mikrotik Router Boards.
 be possible to target other platforms too! This project is very interested to hear of
 attempts to install `autoreverse` on gateway routers so please provide feedback of
 successes *and* failures.
-
-### Compilation From Sources
-
-To fetch, compile and install `autoreverse`, run the following commands to install
-`autoreverse` into into `/usr/local/sbin`
-
-```sh
-git clone https://github.com/markdingo/autoreverse.git
-cd autoreverse
-make clean all
-sudo make install
-```
-
-If `git` is unavailable to you, github offers a zip download function on the project page.
-
-To test the installation, run the following commands:
-
-```sh
-/usr/local/sbin/autoreverse -v
-man autoreverse
-```
-
-All being well, you should see `autoreverse` print version details followed by the start
-of the manpage.
 
 ### Community
 
