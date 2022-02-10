@@ -7,7 +7,6 @@ import (
 
 	"github.com/markdingo/autoreverse/log"
 	"github.com/markdingo/autoreverse/osutil"
-	"github.com/markdingo/autoreverse/pregen"
 )
 
 // Run the server loop checking for signals and stats reports events
@@ -29,7 +28,7 @@ func (t *autoReverse) Run() {
 	t.cfg.PTRZones = []*PTRZone{} // and make sure it sticks!
 	go t.watchForZoneReloads(pzs, reloadInterval)
 
-	fmt.Fprintln(log.Out(), programName, pregen.Version, "Ready")
+	fmt.Fprintln(log.Out(), programName, Version, "Ready")
 
 	// Conditionally create the periodic report channel. Fortunately select purposely
 	// doesn't mind a nil channel, which is very convenient.
@@ -102,7 +101,7 @@ func (t *autoReverse) statsReport(resetCounters bool) {
 	// Include version with output so log parsers can adapt to changes that will inevitably
 	// occur from release to release.
 
-	log.Major("Stats: Uptime ", upDuration, " Interval: ", statsDuration, " ", pregen.Version)
+	log.Major("Stats: Uptime ", upDuration, " Interval: ", statsDuration, " ", Version)
 	log.Major("Stats: Total ", totals.gen.String())
 	log.Major("Stats: A Ptr ", totals.APtr.String())
 	log.Major("Stats: AAAA Ptr ", totals.AAAAPtr.String())

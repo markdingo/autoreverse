@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/markdingo/autoreverse/log"
-	"github.com/markdingo/autoreverse/pregen"
 )
 
 func reportError(severity string, err error, messages ...string) {
@@ -55,7 +54,7 @@ func main() {
 	}
 
 	fmt.Fprintln(log.Out(),
-		programName, pregen.Version, "Starting with Log Level:", log.Level())
+		programName, Version, "Starting with Log Level:", log.Level())
 
 	// Validate everything that is likely a typo or usage error
 	err := ar.ValidateCommandLineOptions()
@@ -97,6 +96,6 @@ func main() {
 
 	ar.statsReport(false) // Final stats - depending on log level
 
-	fmt.Fprintln(log.Out(), programName, pregen.Version, "Exiting after",
+	fmt.Fprintln(log.Out(), programName, Version, "Exiting after",
 		time.Now().Sub(ar.startTime).Round(time.Second))
 }

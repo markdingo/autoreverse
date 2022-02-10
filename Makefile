@@ -1,24 +1,19 @@
+################################################################################
+# Largely this Makefile exists for developers, but it's also of use if 'go
+# build' or 'go install' don't do what you want; namely installing the
+# executable *and* the manpage in traditional Unix locations.
+################################################################################
+
 BINDIST=/usr/local/sbin
 MANDIST=/usr/share/man/man8
 MANSRC=autoreverse.8
-ARPATH=cmd/autoreverse
-ARCMD=$(ARPATH)/autoreverse
-
-ALL=$(ARCMD)
-CLEANPATHS=$(ARPATH)
-ALLPKGS=database/*.go delegation/*.go *util/*.go log/*.go pregen/*.go resolver/*.go
-PREGEN=pregen/version.go pregen/autoreverse.8
-
-# If your version of make complains about this include directive, you can safely remove it
-# without any ill-effects. It's solely to include targets only relevant to the original
-# developer.
--include local/local.mk
+ARCMD=autoreverse
 
 .PHONY: help
 help:
 	@echo
 	@echo Make targets for "'autoreverse'":
-	@echo "	 Local targets: 'clean', 'all' and 'install'"
+	@echo "	 Local targets: 'all', 'vet', 'fmt', 'clean' and 'install'"
 	@echo
 	@echo "	 Cross-platform targets:"
 	@echo "	   'mips' - Mikrotik Router Boards"
@@ -29,23 +24,19 @@ help:
 	@echo "	 Cross-platform Windows targets: 'windowsamd64' and 'windows386'"
 	@echo
 
-all: $(ALL)
-
-.PHONY: clean
-clean: Makefile
-	rm -f $(PREGEN)
-	@for p in $(CLEANPATHS); do make -C $${p} clean; done
-
-$(ARCMD): Makefile $(ARPATH)/*.go $(ALLPKGS) $(PREGEN)
-	make -C $(ARPATH)
-
-race: Makefile $(ARPATH)/*.go $(ALLPKGS) $(PREGEN)
-	make -C $(ARPATH) race
+all: version.go
+	go build
 
 .PHONY: vet
 vet:
 	go vet ./...
 	mandoc -Tlint autoreverse.8; exit 0
+
+.PHONY: clean
+clean:
+	@rm -f $(ARCMD) $(ARCMD).exe
+	@echo Directory cleaned
+	@echo "Warning: Never run 'go clean' as that erases the manpage (for obscure reasons)"
 
 .PHONY: install
 install: $(ARCMD)
@@ -61,25 +52,12 @@ fmt:
 	find . -name '*.go' -type f -print | xargs gofmt -s -w
 
 .PHONY: test tests
-test tests: $(PREGEN)
+test tests:
 	go test ./...
 	go vet ./...
 
-.PHONY: pregen
-pregen: pregen/version.go pregen/autoreverse.8
-
-# Pre-generated files needed by build
-pregen/version.go: generate_version.sh ChangeLog.md Makefile
-	mkdir -p pregen
+version.go: generate_version.sh ChangeLog.md Makefile
 	sh generate_version.sh ChangeLog.md >$@
-
-# pregen is the "embed" directory used by autoreverse to include its manpage. Embed does
-# not allow parent directory references so the choice is to either include an "embed" go
-# program in the top level of the project or copy the man page to a package level
-# sub-directory.
-pregen/autoreverse.8: autoreverse.8
-	mkdir -p pregen
-	cp -f $? $@
 
 # Cross-compile targets
 

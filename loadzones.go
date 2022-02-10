@@ -15,7 +15,6 @@ import (
 	"github.com/markdingo/autoreverse/database"
 	"github.com/markdingo/autoreverse/dnsutil"
 	"github.com/markdingo/autoreverse/log"
-	"github.com/markdingo/autoreverse/pregen"
 	"github.com/markdingo/autoreverse/resolver"
 )
 
@@ -197,7 +196,7 @@ func newTxt(qName, txt string, ttl uint32) (rr *dns.TXT) {
 	return
 }
 
-var commonCHAOSPrefix = programName + " " + pregen.Version + " " + pregen.ReleaseDate
+var commonCHAOSPrefix = programName + " " + Version + " " + ReleaseDate
 
 // Load CHAOS RRs into candidate database. Caller has determined that chaos is enabled.
 func (t *autoReverse) loadFromChaos(db *database.Database) (count int) {

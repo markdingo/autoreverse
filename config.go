@@ -9,7 +9,6 @@ import (
 
 	"github.com/markdingo/autoreverse/dnsutil"
 	"github.com/markdingo/autoreverse/log"
-	"github.com/markdingo/autoreverse/pregen"
 	"github.com/markdingo/autoreverse/resolver"
 )
 
@@ -115,7 +114,7 @@ func (t *config) generateNSIDOpt() {
 
 func (t *config) printVersion() {
 	fmt.Fprintf(log.Out(), "Program:     %s %s (%s)\n",
-		programName, pregen.Version, pregen.ReleaseDate)
+		programName, Version, ReleaseDate)
 	fmt.Fprintf(log.Out(), "Project:     %s\n", t.projectURL)
 	fmt.Fprintf(log.Out(), "Inspiration: %s\n",
 		"https://datatracker.ietf.org/doc/html/rfc8501#section-2.5")

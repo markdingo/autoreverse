@@ -8,7 +8,6 @@ import (
 	flag "github.com/spf13/pflag"
 
 	"github.com/markdingo/autoreverse/log"
-	"github.com/markdingo/autoreverse/pregen"
 )
 
 type parseResult int // This is a ternary variable
@@ -192,7 +191,7 @@ present in the parent name servers.
 	}
 
 	if manpageFlag {
-		fmt.Fprint(log.Out(), string(pregen.Manpage))
+		fmt.Fprint(log.Out(), string(Manpage))
 		return parseStop
 	}
 

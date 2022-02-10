@@ -20,18 +20,10 @@ fi
 set -- $recent
 version=$2
 date=$4
-cat <<EOF
-/*
 
-Package pregen contains files which are pre-generated for the build process and a small
-embed package to included the pregenerated files into the autoreverse executable.
-
-*/
-EOF
-printf 'package pregen\n\nconst (\n'
+printf 'package main\n\nconst (\n'
 printf '\t// Version is auto-generated from ChangeLog.md\n'
 printf '\tVersion = "%s"\n' "${version}"
 printf '\t// ReleaseDate is also auto-generated from ChangeLog.md\n'
 printf '\tReleaseDate = "%s"\n' "${date}"
 printf ')\n'
-

@@ -1,4 +1,6 @@
 # autoreverse Change Log
+### v1.3.0 - 2022-02-10
+  * Move cmd code to top level so "go install" just works
   * Remove compact logging - it's confusing and doesn't save much
   * Add missing qType=PTR test to synth checks
   * Don't bother calling synth functions for qName == authority
