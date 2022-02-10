@@ -131,12 +131,6 @@ autoreverse --forward autoreverse.yourdomain           \
 
 and `autoreverse` will figure out the rest and start answering PTR queries.
 
-For more details about invocation options, please consult the
-[manpage](./MANPAGE.pdf). Note that this pdf rendering is imperfect for reasons I don't
-understand. The best way to read the manpage is via the mandoc command once that package
-is installed.
-
-
 ## Installation
 
 Regardless of how you compile or install `autoreverse` you'll need a recent version of
@@ -173,8 +167,8 @@ All being well, you should see `autoreverse` print version details.
 
 ### Installation the 'Unix' way
 
-To install the `autoreverse` executable and its manpage the Unix way, the sources are
-downloaded and build and install process is dictated by a `Makefile`.
+To install `autoreverse` and its manpage the Unix way, the sources are downloaded then
+built and installed via the `Makefile`.
 
 ```sh
 git clone https://github.com/markdingo/autoreverse.git
