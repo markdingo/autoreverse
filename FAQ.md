@@ -277,8 +277,8 @@ not... The hope is that feature is useful to small sites which are only assigned
 `ipv4 address by their ISP which is already in use by an existing name server.
 
 What `--passthru` does, is make it possible to move the existing name server onto a
-different listen address - whether that's on the same system or some other internal system
-- and have `autoreverse` listen on port 53 of the external IP address previously in
+different listen address, whether that's on the same system or some other internal system,
+then have `autoreverse` listen on port 53 of the external IP address previously in
 use. You set `--passthru` to the listen address of the moved name server.
 
 With `--passthru` set, `autoreverse` proxies all out-of-bailiwick (Class INET only)
