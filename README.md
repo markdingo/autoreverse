@@ -142,7 +142,7 @@ Regardless of how you compile or install `autoreverse` you'll need a recent vers
 ### Installation the 'go' way
 
 ```sh
-go install https://github.com/markdingo/autoreverse
+go install github.com/markdingo/autoreverse@latest
 ```
 
 should result in an `autoreverse` executable in `$GOPATH/bin` or `$HOME/go/bin`.
