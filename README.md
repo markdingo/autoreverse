@@ -131,13 +131,20 @@ autoreverse --forward autoreverse.yourdomain           \
 
 and `autoreverse` will figure out the rest and start answering PTR queries.
 
-For more details about invocation options, please consult the [manpage](./MANPAGE.txt).
+For more details about invocation options, please consult the
+[manpage](./MANPAGE.pdf). Note that this pdf rendering is imperfect for reasons I don't
+understand. The best way to read the manpage is via the mandoc command once that package
+is installed.
 
 
 ## Installation
 
 Regardless of how you compile or install `autoreverse` you'll need a recent version of
 [go](https://golang.org). 1.17 or later is recommended.
+
+There are two ways to install `autoreverse`. The 'go' way and the 'Unix' way. While the
+simplicity of installing the 'go' way has its merits, it doesn't install in traditional
+Unix locations, nor does it install the manpage. The choice is up to you.
 
 ### Installation the 'go' way
 
@@ -147,14 +154,27 @@ go install github.com/markdingo/autoreverse@latest
 
 should result in an `autoreverse` executable in `$GOPATH/bin` or `$HOME/go/bin`.
 
-While the simplicity of installing the 'go' way has its merits, it
-doesn't install in traditional Unix locations, nor does it install the
-manpage. To do that you'll need to compile and install the 'Unix' way
 
-### Compile and install the 'Unix' way
+To test the installation, run the following command:
 
-To fetch, compile and install `autoreverse`, run the following commands to install
-`autoreverse` into `/usr/local/sbin`
+```sh
+$GOPATH/bin/autoreverse -v
+```
+
+or possibly:
+
+```sh
+$HOME/go/bin/autoreverse -v
+```
+
+depending on your go setup.
+
+All being well, you should see `autoreverse` print version details.
+
+### Installation the 'Unix' way
+
+To install the `autoreverse` executable and its manpage the Unix way, the sources are
+downloaded and build and install process is dictated by a `Makefile`.
 
 ```sh
 git clone https://github.com/markdingo/autoreverse.git
@@ -163,7 +183,8 @@ make all
 sudo make install
 ```
 
-If `git` is unavailable to you, github offers a zip download function on the project page.
+If `git clone` is unavailable to you, github offers a zip download function on the project
+page.
 
 To test the installation, run the following commands:
 

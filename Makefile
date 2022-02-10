@@ -24,7 +24,7 @@ help:
 	@echo "	 Cross-platform Windows targets: 'windowsamd64' and 'windows386'"
 	@echo
 
-all: version.go
+all: version.go MANPAGE.pdf
 	go build
 
 .PHONY: vet
@@ -58,6 +58,9 @@ test tests:
 
 version.go: generate_version.sh ChangeLog.md Makefile
 	sh generate_version.sh ChangeLog.md >$@
+
+MANPAGE.pdf: autoreverse.8
+	mandoc -T pdf $? >$@
 
 # Cross-compile targets
 
