@@ -9,6 +9,12 @@ MANDIST=/usr/share/man/man8
 MANSRC=autoreverse.8
 ARCMD=autoreverse
 
+all: $(ARCMD) USAGE.md
+	@echo "'all' target built. Consider 'make help' for other targets".
+
+$(ARCMD): version.go
+	go build
+
 .PHONY: help
 help:
 	@echo
@@ -23,9 +29,6 @@ help:
 	@echo
 	@echo "	 Cross-platform Windows targets: 'windowsamd64' and 'windows386'"
 	@echo
-
-all: version.go
-	go build
 
 .PHONY: vet
 vet:
@@ -58,6 +61,9 @@ test tests:
 
 version.go: generate_version.sh ChangeLog.md Makefile
 	sh generate_version.sh ChangeLog.md >$@
+
+USAGE.md: $(ARCMD) generate_usage.sh Makefile
+	./$(ARCMD) -h | sh generate_usage.sh >$@
 
 # Cross-compile targets
 

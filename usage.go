@@ -222,7 +222,7 @@ func printUsage(cfg *config, fs *flag.FlagSet) {
 	fmt.Fprintln(o, "                 [--log-major=true] [--log-minor] [--log-debug]")
 	fmt.Fprintln(o, "                 [--log-queries=true] [--report time.Duration=1h]")
 	fmt.Fprintln(o)
-	fmt.Fprintln(o, "     Ellipses (‘\u2026’) indicate options which can be specified multiple times.")
+	fmt.Fprintln(o, "     Ellipses (\u2026) indicate options which can be specified multiple times.")
 	fmt.Fprint(o, `
 DESCRIPTION
      autoreverse is an authoritative DNS server with the goal of making it as
