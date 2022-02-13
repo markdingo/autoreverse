@@ -240,6 +240,14 @@ func (t *server) ServeDNS(wtr dns.ResponseWriter, query *dns.Msg) {
 	switch pending {
 	case serveDone:
 		req.addNote("DB")
+		if len(req.response.Answer) >= 1 { // Log first label of PTRs found in the DB
+			if prr, ok := req.response.Answer[0].(*dns.PTR); ok {
+				ar := strings.SplitN(prr.Ptr, ".", 2)
+				if len(ar) > 0 { // which it always should be
+					req.addNote(ar[0])
+				}
+			}
+		}
 		req.stats.gen.dbDone++
 		return
 	case NoError:
