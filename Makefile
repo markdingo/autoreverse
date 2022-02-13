@@ -9,10 +9,10 @@ MANDIST=/usr/share/man/man8
 MANSRC=autoreverse.8
 ARCMD=autoreverse
 
-all: $(ARCMD) USAGE.md
-	@echo "'all' target built. Consider 'make help' for other targets".
+all: version.go $(ARCMD) USAGE.md
+	@echo All targets built. "Consider 'make help' for other targets".
 
-$(ARCMD): version.go
+$(ARCMD): *.go database/*.go delegation/*.go dnsutil/*.go log/*.go osutil/*.go resolver/*.go Makefile
 	go build
 
 .PHONY: help
@@ -62,7 +62,7 @@ test tests:
 version.go: generate_version.sh ChangeLog.md Makefile
 	sh generate_version.sh ChangeLog.md >$@
 
-USAGE.md: $(ARCMD) generate_usage.sh Makefile
+USAGE.md: $(ARCMD) usage.go generate_usage.sh Makefile
 	./$(ARCMD) -h | sh generate_usage.sh >$@
 
 # Cross-compile targets
