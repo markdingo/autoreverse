@@ -13,6 +13,10 @@ func IsSignalUSR1(s os.Signal) bool {
 	return false
 }
 
+func IsSignalUSR2(s os.Signal) bool {
+	return false
+}
+
 func IsSignalTERM(s os.Signal) bool {
 	return false
 }
