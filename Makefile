@@ -70,35 +70,35 @@ USAGE.md: $(ARCMD) usage.go generate_usage.sh Makefile
 .PHONY: mips
 mips: clean
 	@echo 'Building for mips Linux targets (maybe Mikrotik Router Boards)'
-	@GOOS=linux GOARCH=mips $(MAKE) all
+	@GOOS=linux GOARCH=mips go build
 	@file $(ARCMD)
 
 .PHONY: mips64
 mips64: clean
 	@echo 'Building for mips64 Linux targets (Ubiquiti er3, er6)'
-	@GOOS=linux GOARCH=mips64 $(MAKE) all
+	@GOOS=linux GOARCH=mips64 go build
 	@file $(ARCMD)
 
 .PHONY: armv71
 armv71: clean
 	@echo 'Building for 32-bit armv71 (ASUS RT-AX55)'
-	@GOOS=linux GOARCH=arm $(MAKE) all
+	@GOOS=linux GOARCH=arm go build
 	@file $(ARCMD)
 
 .PHONY: armv8
 armv8: clean
 	@echo 'Building for (64-bit armv8) (pi4)'
-	@GOOS=linux GOARCH=arm $(MAKE) all
+	@GOOS=linux GOARCH=arm go build
 	@file $(ARCMD)
 
 .PHONY: windowsamd64
 windowsamd64: clean
 	@echo Building for amd64 Windows
-	@GOOS=windows GOARCH=amd64 $(MAKE) all
+	@GOOS=windows GOARCH=amd64 go build
 	@file $(ARCMD).exe
 
 .PHONY: windows386
 windows386: clean
 	@echo Building for 386 Windows
-	@GOOS=windows GOARCH=386 $(MAKE) all
+	@GOOS=windows GOARCH=386 go build
 	@file $(ARCMD).exe
