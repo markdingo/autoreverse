@@ -12,7 +12,7 @@ ARCMD=autoreverse
 all: version.go $(ARCMD) USAGE.md
 	@echo All targets built. "Consider 'make help' for other targets".
 
-$(ARCMD): *.go database/*.go delegation/*.go dnsutil/*.go log/*.go osutil/*.go resolver/*.go Makefile
+$(ARCMD): *.go */*.go Makefile $(MANSRC)
 	go build
 
 .PHONY: help
