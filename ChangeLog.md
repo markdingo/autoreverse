@@ -1,4 +1,5 @@
 # autoreverse Change Log
+  * Replace dns.MsgAcceptFunc to ensure rfc7873#5.4 queries are accepted
 ### v1.3.0 - 2022-02-10
   * Move cmd code to top level so "go install" just works
   * Remove compact logging - it's confusing and doesn't save much

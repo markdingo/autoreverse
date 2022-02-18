@@ -146,8 +146,14 @@ Unix locations, nor does it install the manpage. The choice is up to you.
 ```sh
 go install github.com/markdingo/autoreverse@latest
 ```
+or if you're after the leading edge, possibly:
 
-should result in an `autoreverse` executable in `$GOPATH/bin` or `$HOME/go/bin`.
+```sh
+go install github.com/markdingo/autoreverse@main
+```
+
+In either case, the end result should be an `autoreverse` executable in `$GOPATH/bin` or
+`$HOME/go/bin`.
 
 
 To test the installation, run the following command:

@@ -76,6 +76,15 @@ func newServer(cfg *config, dbGetter *database.Getter, r resolver.Resolver, netw
 
 	t.miekg = &dns.Server{Net: t.network, Addr: t.address, ReusePort: true, Handler: t}
 
+	// The miekg.defaultMsgAcceptFunc rejects Server Cookie queries (RFC7873#5.4) as
+	// qdcount==0, so that function has been replaced with our own function with is
+	// mostly a clone with the original qdcount != 1 commented out. We also take the
+	// opportunity to gather stats on rejections as that wasn't previously possible.
+
+	t.miekg.MsgAcceptFunc = func(dh dns.Header) dns.MsgAcceptAction {
+		return t.customMsgAcceptFunc(dh)
+	}
+
 	return t
 }
 
@@ -111,5 +120,12 @@ func (t *server) stop() {
 func (t *server) addStats(from *serverStats) {
 	t.statsMu.Lock()
 	t.stats.add(from)
+	t.statsMu.Unlock()
+}
+
+// Called from acceptFunc from within miekg when a query fails prior to our ServerDNS()
+func (t *server) addAcceptError() {
+	t.statsMu.Lock()
+	t.stats.gen.badRequest++
 	t.statsMu.Unlock()
 }

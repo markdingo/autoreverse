@@ -88,11 +88,11 @@ func (t *server) ServeDNS(wtr dns.ResponseWriter, query *dns.Msg) {
 		}
 	}
 
-	// Is this a cookie-only request?
+	// Is this a "Query for a Server Cookie"?
 	if len(req.clientCookie) > 0 && len(req.serverCookie) == 0 && len(req.query.Question) == 0 {
 		req.response.SetReply(query)
 		t.writeMsg(wtr, req)
-		req.addNote("Cookie-only query")
+		req.addNote("Query Server Cookie")
 		req.stats.gen.cookieOnly++
 		return
 	}
