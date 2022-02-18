@@ -707,7 +707,7 @@ func TestDNSCookies(t *testing.T) {
 		rcode    int
 		note     string
 	}{
-		{false, "0123456789abcdef", "", dns.RcodeSuccess, "Cookie-only"},
+		{false, "0123456789abcdef", "", dns.RcodeSuccess, "Query Server Cookie"},
 		{true, "", "", dns.RcodeFormatError, "Malformed"},                   // No cCookie
 		{true, "01", "", dns.RcodeFormatError, "Malformed"},                 // Short cCookie
 		{true, "0123456789abcdefab", "", dns.RcodeFormatError, "Malformed"}, // Short sCookie
