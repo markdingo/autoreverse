@@ -136,9 +136,7 @@ func (t *server) ServeDNS(wtr dns.ResponseWriter, query *dns.Msg) {
 	// 6. Database
 	// 7. Synthesis
 	// 8. Pending serveResult
-
-	//		dnsutil.ClassToString(dns.Class(req.question.Qclass)),
-	//		dnsutil.TypeToString(req.question.Qtype), req.question.Name)
+	//
 	// Dispatch 1. Probe
 	// Probes can be sent multiple times and this function responds possitively each
 	// time. Whether probes are oneshot or multishot process is determined by probe
