@@ -50,7 +50,7 @@ func (t *server) ServeDNS(wtr dns.ResponseWriter, query *dns.Msg) {
 	defer t.addStats(&req.stats) // Add req.stats to t.stats
 
 	// Validate query. Extra can have EDNS options so don't length check that slice.
-	// As of RFC7873 a query with no questions and a COOKIE OPT is valid.
+	// As of RFC7873 a query with no questions and a COOKIE OPT is valid (#5.4).
 	//
 	// miekg.DefaultMsgAcceptFunc does some checking prior to the query arriving here,
 	// but we are slightly more paranoid.
