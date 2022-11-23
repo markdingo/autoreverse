@@ -67,27 +67,33 @@ USAGE.md: $(ARCMD) usage.go generate_usage.sh Makefile
 
 # Cross-compile targets
 
-.PHONY: mips
-mips: clean
-	@echo 'Building for mips Linux targets (maybe Mikrotik Router Boards)'
+.PHONY: freebsd/amd64
+freebsd/amd64: clean
+	@echo 'Building for FreeBSD/amd64 targets (maybe OPNSense Routers)'
+	@GOOS=freebsd GOARCH=amd64 go build
+	@file $(ARCMD)
+
+.PHONY: linux/mips
+linux/mips: clean
+	@echo 'Building for Linux/mips targets (maybe Mikrotik Router Boards)'
 	@GOOS=linux GOARCH=mips go build
 	@file $(ARCMD)
 
-.PHONY: mips64
-mips64: clean
-	@echo 'Building for mips64 Linux targets (Ubiquiti er3, er6)'
+.PHONY: linux/mips64
+linux/mips64: clean
+	@echo 'Building for Linux/mips64 targets (Ubiquiti er3, er6)'
 	@GOOS=linux GOARCH=mips64 go build
 	@file $(ARCMD)
 
-.PHONY: armv71
-armv71: clean
-	@echo 'Building for 32-bit armv71 (ASUS RT-AX55)'
+.PHONY: linux/armv71
+linux/armv71: clean
+	@echo 'Building for 32-bit Linux/armv71 (ASUS RT-AX55)'
 	@GOOS=linux GOARCH=arm go build
 	@file $(ARCMD)
 
-.PHONY: armv8
-armv8: clean
-	@echo 'Building for (64-bit armv8) (pi4)'
+.PHONY: linux/armv8
+linux/armv8: clean
+	@echo 'Building for 64-bit Linux/armv8 (pi4)'
 	@GOOS=linux GOARCH=arm go build
 	@file $(ARCMD)
 
