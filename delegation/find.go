@@ -100,7 +100,6 @@ func (t *Finder) FindAndProbe(pr Probe) (R Results, err error) {
 // The end result of gathering these target delegation details is that the caller can
 // synthesize the target zone SOA and probe the target name servers to self-identify.
 //
-//
 // If an error causes complete failure to find any authority, return error with pa and ta
 // undefined. Otherwise at least the parent authority is returned.
 //

@@ -36,10 +36,10 @@ type zoneCutIterator struct {
 // target which are one label up. To walk up the DNS tree in search of the zone cut use
 // the following "for loop".
 //
-// for iter := probe.Begin(); iter != probe.End(); iter = probe.Next(iter) {
-//     zoneName := probe.Zone(iter)
-//     ...
-// }
+//	for iter := probe.Begin(); iter != probe.End(); iter = probe.Next(iter) {
+//	    zoneName := probe.Zone(iter)
+//	    ...
+//	}
 //
 // Once created, a Probe is never modified so it can be freely shared between
 // go-routines. Iterators, however, cannot be shared and can only be used on the Probe
