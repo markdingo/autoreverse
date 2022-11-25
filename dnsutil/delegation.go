@@ -8,7 +8,7 @@ import (
 // response.
 //
 // Strictly, a valid delegation is one which is !Authoritative, has zero Answer RRs, has
-//at least one Ns RR and optional contains glue in Extra.
+// at least one Ns RR and optional contains glue in Extra.
 func ValidDelegation(response *dns.Msg) bool {
 	if response.MsgHdr.Rcode != dns.RcodeSuccess {
 		return false
