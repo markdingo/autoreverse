@@ -97,14 +97,14 @@ linux/armv8: clean
 	@GOOS=linux GOARCH=arm go build
 	@file $(ARCMD)
 
-.PHONY: windowsamd64
-windowsamd64: clean
+.PHONY: windows/amd64
+windows/amd64: clean
 	@echo Building for amd64 Windows
 	@GOOS=windows GOARCH=amd64 go build
 	@file $(ARCMD).exe
 
-.PHONY: windows386
-windows386: clean
+.PHONY: windows/386
+windows/386: clean
 	@echo Building for 386 Windows
 	@GOOS=windows GOARCH=386 go build
 	@file $(ARCMD).exe
