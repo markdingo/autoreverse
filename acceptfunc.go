@@ -7,8 +7,10 @@ import (
 /*
 
 This is a clone of the miekg.defaultMsgAcceptFunc with the test for qdcount != 1
-removed. This is to support queries for Server Cookies get thru to our handler. see RFC
-7873 Section 5.4. Review periodically to ensure it still matches the original.
+removed. This is to support queries for Server Cookies getting thru to our handler - see
+RFC 7873 Section 5.4. Review this function periodically to ensure it stays in sync with
+the miekg default. Last reviewed 15Nov2022 with the last commit of the miekg original
+being 3b8982c on Oct 15, 2021.
 
 */
 
