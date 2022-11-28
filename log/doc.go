@@ -1,5 +1,4 @@
 /*
-
 Package log provides global output control across the whole application. Logging comes in
 four levels: Silent, Major, Minor and Debug which each level more detailed than the
 previous. It's up to the application to decided which output belong with which
@@ -19,6 +18,5 @@ trimmed.
 
 Specialist logging functions external to this package should still use log.Out() to access
 the current io.Writer for the purposes of capturing output for tests.
-
 */
 package log
