@@ -39,7 +39,7 @@ func TestResolver(t *testing.T) {
 		}
 	}
 	if nsc == 0 {
-		t.Error("Apple.com has no in-bailiwick NSes?", nss)
+		t.Error("Apple.com has no in-domain NSes?", nss)
 	}
 
 	if ipc == 0 {
