@@ -6,12 +6,12 @@ import (
 	"github.com/miekg/dns"
 )
 
-// InBailiwick returns true if the purported sub-domain is in-bailiwick of the parent
+// InDomain returns true if the purported sub-domain is in-domain of the parent
 // domain. This function assumes two relatively well-formed domain names but makes sure
 // they are both Canonical before comparisons are made. In the interest of being "helpful"
 // the parent domain may or may not have a leading "." as that is common for a lot of
 // domain storage in this program.
-func InBailiwick(sub, parent string) bool {
+func InDomain(sub, parent string) bool {
 	if len(parent) == 0 || parent == "." { // Root?
 		return true
 	}

@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-func TestInBailiwick(t *testing.T) {
+func TestInDomain(t *testing.T) {
 	testCases := []struct {
 		sub, parent string
 		expect      bool
@@ -20,7 +20,7 @@ func TestInBailiwick(t *testing.T) {
 	}
 
 	for ix, tc := range testCases {
-		if InBailiwick(tc.sub, tc.parent) != tc.expect {
+		if InDomain(tc.sub, tc.parent) != tc.expect {
 			t.Error(ix, "Wrong", tc.sub, tc.parent, tc.expect)
 		}
 	}
