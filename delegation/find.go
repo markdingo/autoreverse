@@ -94,8 +94,8 @@ func (t *Finder) FindAndProbe(pr Probe) (R Results, err error) {
 // of the delegation details for the parent/delegating domain.
 //
 // That means finding the parent's name servers and directly querying them for the target
-// NSes and their addresses - if in-domain of the parents. If the delegating name
-// servers are out-of-bailiwick the resolver is used to find their addresses.
+// NSes and their addresses - if in-domain of the parents. If the delegating name servers
+// are not in-domain the resolver is used to find their addresses.
 //
 // The end result of gathering these target delegation details is that the caller can
 // synthesize the target zone SOA and probe the target name servers to self-identify.
