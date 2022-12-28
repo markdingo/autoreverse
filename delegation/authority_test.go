@@ -16,7 +16,7 @@ func TestAuthorityLame(t *testing.T) {
 	if !a.IsCompletelyLame() {
 		t.Error("An empty Authority should be completely lame")
 	}
-	// Create out-of-bailiwick and in-bailiwick name servers
+	// Create not in-domain and in-domain name servers
 	ns1, _ := dns.NewRR("autoreverse.example.net. IN NS ns1.autoreverse.example.net")
 	ns2, _ := dns.NewRR("autoreverse.example.net. IN NS ns2.autoreverse.example.net")
 	a.NS = append(a.NS, ns1)

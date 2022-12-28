@@ -94,7 +94,7 @@ func (t *Finder) FindAndProbe(pr Probe) (R Results, err error) {
 // of the delegation details for the parent/delegating domain.
 //
 // That means finding the parent's name servers and directly querying them for the target
-// NSes and their addresses - if in-bailiwick of the parents. If the delegating name
+// NSes and their addresses - if in-domain of the parents. If the delegating name
 // servers are out-of-bailiwick the resolver is used to find their addresses.
 //
 // The end result of gathering these target delegation details is that the caller can
@@ -131,8 +131,8 @@ func (t *Finder) findAuthorities(pr Probe) (pa, ta *Authority, err error) {
 	// Iterate over the parent's name server names first resolving their address(es)
 	// then querying each address for NS details of the target. Once the target NS
 	// names are known, re-query the parent's name servers and ask for the target name
-	// server addresses if they are in-bailiwick and if they weren't previously
-	// supplied as additionals in the NS response (which would normally be the case).
+	// server addresses if they are in-domain and if they weren't previously supplied
+	// as additionals in the NS response (which would normally be the case).
 
 	log.Minorf("findAuthorities:Resolving Delegation of %s at %s", pr.Target(), parent)
 	for _, ns := range nsSet { // Resolve each name server

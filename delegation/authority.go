@@ -57,7 +57,7 @@ func (t *Authority) populateFromDelegation(m *dns.Msg) {
 }
 
 // Find addresses of all name servers which do not already have at least one address in
-// the Authority. This is typically non-glue names tho it can also occur for in-bailiwick
+// the Authority. This is typically non-glue names tho it can also occur for in-domain
 // names which happen to be CNAMEs! In any event, rather than try and discriminate between
 // names which should have come back as glue, we simply query for all outstanding names
 // and let a real resolver work it out for us.
