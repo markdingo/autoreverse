@@ -1,5 +1,5 @@
 ################################################################################
-# Largely this Makefile exists for developers, but it's also of use if 'go
+# This Makefile mostly exists for developers, but it's also of use if 'go
 # build' or 'go install' don't do what you want; namely installing the
 # executable *and* the manpage in traditional Unix locations.
 ################################################################################
@@ -22,10 +22,13 @@ help:
 	@echo "	 Local targets: 'all', 'vet', 'fmt', 'clean' and 'install'"
 	@echo
 	@echo "	 Cross-platform targets:"
-	@echo "	   'mips' - Mikrotik Router Boards"
-	@echo "	   'mips64' - Ubiquiti Edge Router series"
-	@echo "	   'armv71' - 32-bit Raspberry Pi3/Pi-hole, ASUS RT-AX55"
-	@echo "	   'armv8' - 64-bit Raspberry Pi4/Pi-hole"
+	@echo "	   'freebsd/amd64' - OPNSense on Intel"
+	@echo "	   'linux/mips' - Mikrotik Router Boards"
+	@echo "	   'linux/mips64' - Ubiquiti Edge Router series"
+	@echo "	   'linux/armv71' - 32-bit Raspberry Pi3/Pi-hole, ASUS RT-AX55"
+	@echo "	   'linux/armv8' - 64-bit Raspberry Pi4/Pi-hole"
+	@echo "	   'windows/amd64' - Windows 64bit on Intel/AMD"
+	@echo "	   'windows/386' - Windows 32bit"
 	@echo
 	@echo "	 Cross-platform Windows targets: 'windowsamd64' and 'windows386'"
 	@echo
@@ -71,6 +74,12 @@ USAGE.md: $(ARCMD) usage.go generate_usage.sh Makefile
 freebsd/amd64: clean
 	@echo 'Building for FreeBSD/amd64 targets (maybe OPNSense Routers)'
 	@GOOS=freebsd GOARCH=amd64 go build
+	@file $(ARCMD)
+
+.PHONY: freebsd/arm64
+freebsd/arm64: clean
+	@echo 'Building for FreeBSD/arm64 targets (maybe OPNSense Routers)'
+	@GOOS=freebsd GOARCH=arm64 go build
 	@file $(ARCMD)
 
 .PHONY: linux/mips
