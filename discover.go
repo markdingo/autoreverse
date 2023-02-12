@@ -28,7 +28,7 @@ func (t *autoReverse) discover() error {
 	return nil
 }
 
-// Forward Discovery.
+// discoverForward searches the forward DNS for the authoritative parents of our domain.
 //
 // Start with the forward discovery as it's highly likely that the reverse discovery will
 // refer to the forward and be queried from resolvers by the probe process. The end result
@@ -73,8 +73,8 @@ func (t *autoReverse) discoverForward(finder *delegation.Finder, domain string) 
 	return nil
 }
 
-// Reverse Discovery.
-//
+// discoverAllReverses searches the reverse DNS for the authoritative parents of all our
+// reverse domains.
 func (t *autoReverse) discoverAllReverses(finder *delegation.Finder) error {
 	// Set the reverse probe in the mutables so the dns server responds and also set
 	// the current authorities to *only* the forward zone. We don't want earlier
