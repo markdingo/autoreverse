@@ -161,10 +161,10 @@ something like this:
  ;;
 ```
 
-which defines a single in-bailiwick name server of `autoreverse.yourdomain` and makes
+which defines a single in-domain name server of `autoreverse.yourdomain` and makes
 `autoreverse` authoritative for supplying that information.
 
-If you prefer, the name server addresses need not be in-bailiwick, as shown with this
+If you prefer, the name server addresses need not be in-domain, as shown with this
 snippet:
 
 
@@ -281,9 +281,9 @@ different listen address, whether that's on the same system or some other intern
 then have `autoreverse` listen on port 53 of the external IP address previously in
 use. You set `--passthru` to the listen address of the moved name server.
 
-With `--passthru` set, `autoreverse` proxies all out-of-bailiwick (Class INET only)
-queries thru to the existing name server and similarly proxies any response back to the
-original client. The query and response are not modified in any way.
+With `--passthru` set, `autoreverse` proxies all not in-domain (Class INET only) queries
+thru to the existing name server and similarly proxies any response back to the original
+client. The query and response are not modified in any way.
 
 It is speculated that the potential risk with `--passthru` is that some resolvers which
 track authoritative servers with cookies and maximum-packet sizes *may* get confused due
