@@ -74,7 +74,7 @@ func TestStatsServer(t *testing.T) {
 	ss2.AForward.good = 6
 	ss2.AAAAForward.good = 7
 	ss1.add(&ss2)
-	exp := "Gen: q=0/0/0/0 C=0/0/2/0 gen=0/1/0/3/0 auth=0/0/0 tc=0/0 dbsr=0/0/0/0 synth=0/0/0 sr=0/0/0/0 APtr: q=0 good=4(0) trunc=0 invErr=0 AAAAPtr: q=0 good=5(0) trunc=0 invErr=0 AForward: q=0 good=6(0) trunc=0 invErr=0 AAAAForward: q=0 good=7(0) trunc=0 invErr=0"
+	exp := "Gen: q=0/0/0/0 C=0/0/2/0 gen=0/1/0/3/0 auth=0/0/0 tc=0/0 db=0/0/0/0 synth=0/0/0 sr=0/0/0/0 APtr: q=0 good=4(0) trunc=0 invErr=0 AAAAPtr: q=0 good=5(0) trunc=0 invErr=0 AForward: q=0 good=6(0) trunc=0 invErr=0 AAAAForward: q=0 good=7(0) trunc=0 invErr=0"
 	got := ss1.String()
 	if exp != got {
 		t.Error("serverStats wrong. \nExp:", exp, "\nGot", got)

@@ -101,7 +101,7 @@ func (t *generalStats) add(from *generalStats) {
 }
 
 func (t *generalStats) String() string {
-	return fmt.Sprintf("q=%d/%d/%d/%d C=%d/%d/%d/%d gen=%d/%d/%d/%d/%d auth=%d/%d/%d tc=%d/%d dbsr=%d/%d/%d/%d synth=%d/%d/%d sr=%d/%d/%d/%d",
+	return fmt.Sprintf("q=%d/%d/%d/%d C=%d/%d/%d/%d gen=%d/%d/%d/%d/%d auth=%d/%d/%d tc=%d/%d db=%d/%d/%d/%d synth=%d/%d/%d sr=%d/%d/%d/%d",
 		t.queries, t.badRequest, t.chaos, t.nsid,
 		t.cookie, t.cookieOnly, t.wrongCookie, t.malformedCookie,
 		t.passthruOut, t.passthruIn, t.chaosRefused, t.noAuthority, t.wrongClass,
