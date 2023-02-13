@@ -49,8 +49,8 @@ func (t *authority) synthesizeSOA(mboxDomain string, TTLAsSecs uint32) {
 }
 
 // authorities contains the Zones Of Authority which are primarily used to determine
-// whether queries are in-bailiwick or not. Once populated, sort() should be called to
-// ensure findInBailiwick() functions properly.
+// whether queries are in-domain or not. Once populated, sort() should be called to ensure
+// findInDomain() functions properly.
 type authorities struct {
 	slice []*authority
 }
@@ -75,7 +75,7 @@ func (t *authorities) len() int {
 }
 
 // sort arranges the slice of authorities to be in most-specific-first order to ensure
-// that findInBailiwick() returns the most specific zone.
+// that findInDomain() returns the most specific zone.
 //
 // Label count is the primary sort key, with less labels coming earler. If the label
 // counts are equal there can't possibly be an overlap so it doesn't matter which order
@@ -97,7 +97,7 @@ func (t *authorities) sort() {
 	)
 }
 
-// findInBailiwick returns the matching authority for the qName or nil.
+// findInDomain returns the matching authority for the qName or nil.
 //
 // The search is serial as it's a suffix match rather than an exact match. Possibly could
 // have some fancy suffix tree to mimic the DNS hierarchy, but in most cases the number of
@@ -106,9 +106,9 @@ func (t *authorities) sort() {
 //
 // Authorities are assumed to have already been sorted by sortAuthorities which ensures
 // this function will return the longest prefix/most-specific match.
-func (t *authorities) findInBailiwick(qName string) *authority {
+func (t *authorities) findInDomain(qName string) *authority {
 	for _, auth := range t.slice {
-		if dnsutil.InBailiwick(qName, auth.Domain) {
+		if dnsutil.InDomain(qName, auth.Domain) {
 			return auth
 		}
 	}
@@ -116,9 +116,9 @@ func (t *authorities) findInBailiwick(qName string) *authority {
 	return nil
 }
 
-// findIPInBailiwick finds the matching reverse authority which contains the
+// findIPInDomain finds the matching reverse authority which contains the
 // IP. Return nil if not found.
-func (t *authorities) findIPInBailiwick(ip net.IP) *authority {
+func (t *authorities) findIPInDomain(ip net.IP) *authority {
 	for _, auth := range t.slice {
 		if !auth.forward && auth.cidr.Contains(ip) {
 			return auth
