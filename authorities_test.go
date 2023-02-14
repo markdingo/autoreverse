@@ -61,7 +61,7 @@ func TestAuthoritiesSort(t *testing.T) {
 	}
 }
 
-func TestAuthoritiesFindInBailiwick(t *testing.T) {
+func TestAuthoritiesFindInDomain(t *testing.T) {
 	var auths authorities
 	for _, d := range []string{"a.example.net.", "b.a.example.net.", "c.b.a.example.net."} {
 		a := &authority{forward: true}
@@ -96,7 +96,7 @@ func TestAuthoritiesFindInBailiwick(t *testing.T) {
 	}
 
 	for ix, tc := range testCases {
-		a := auths.findInBailiwick(tc.qName)
+		a := auths.findInDomain(tc.qName)
 		if a == nil {
 			if len(tc.expect) > 0 {
 				t.Error(ix, "No auth returned for", tc.qName)
