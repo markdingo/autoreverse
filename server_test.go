@@ -50,7 +50,7 @@ func TestStartServersBad(t *testing.T) {
 	log.SetOut(out)
 	log.SetLevel(log.MajorLevel)
 	ar := newAutoReverse(nil, nil)
-	srv := newServer(ar.cfg, ar.dbGetter, ar.resolver, "udp", "127.0.0.1:xx")
+	srv := newServer(ar.cfg, ar.dbGetter, ar.resolver, nil, "udp", "127.0.0.1:xx")
 	err := ar.startServer(srv)
 	if err == nil {
 		t.Error("Expected server to fail due to bogus port number")

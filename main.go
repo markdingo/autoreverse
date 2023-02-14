@@ -62,6 +62,11 @@ func main() {
 		fatal(err)
 	}
 
+	// RRL is conditionally activated if any --rrl-*psec options have been set
+	if ar.activateRRL() {
+		fmt.Fprintln(log.Out(), "RRL Active", ar.cfg.rrlConfig.String())
+	}
+
 	// Zone of Authority phase
 	if len(ar.cfg.localForward) > 0 {
 		ar.generateLocalForward(ar.cfg.localForward) // Synthesize local forward zone

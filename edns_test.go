@@ -165,8 +165,8 @@ func TestValidateOrGenerate(t *testing.T) {
 		req := newRequest(query, src, "udp")
 		req.clientCookie, _ = hex.DecodeString(tc.client)
 		req.serverCookie, _ = hex.DecodeString(tc.server)
-		v := req.validateOrGenerateCookie(secrets, tc.unixTime)
-		if v != tc.valid {
+		req.validateOrGenerateCookie(secrets, tc.unixTime)
+		if req.cookieValid != tc.valid {
 			t.Error("Err", ix, "Valid mismatch. Expected", tc.valid)
 		}
 		if len(tc.output) > 0 { // Is output expected?

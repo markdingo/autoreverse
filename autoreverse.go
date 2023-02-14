@@ -7,6 +7,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/markdingo/rrl"
+
 	"github.com/markdingo/autoreverse/database"
 	"github.com/markdingo/autoreverse/dnsutil"
 	"github.com/markdingo/autoreverse/log"
@@ -23,8 +25,9 @@ type autoReverse struct {
 	forceReload chan struct{} // Tell watcher to forcefully reload
 	sig         chan os.Signal
 
-	resolver resolver.Resolver
-	dbGetter *database.Getter
+	resolver   resolver.Resolver
+	dbGetter   *database.Getter
+	rrlHandler *rrl.RRL
 
 	wg      sync.WaitGroup // For all servers started
 	servers []*server
@@ -70,6 +73,17 @@ func (t *autoReverse) addAuthority(add *authority) bool {
 	return t.authorities.append(add)
 }
 
+// Spin up the rrlHandler and return true if the config has meaningful rate limits set. If
+// the config is effectively a no-op, do not create the rrlHandler.
+func (t *autoReverse) activateRRL() bool {
+	if t.cfg.rrlConfig.IsActive() {
+		t.rrlHandler = rrl.NewRRL(t.cfg.rrlConfig)
+		return true
+	}
+
+	return false
+}
+
 // Open Listen sockets and start servers. Does not return until all servers have started
 // or an error is detected.
 //
@@ -90,7 +104,7 @@ func (t *autoReverse) startServers() {
 
 	for _, network := range []string{dnsutil.UDPNetwork, dnsutil.TCPNetwork} {
 		for _, addr := range t.cfg.listen {
-			srv := newServer(t.cfg, t.dbGetter, t.resolver, network, addr)
+			srv := newServer(t.cfg, t.dbGetter, t.resolver, t.rrlHandler, network, addr)
 			srv.cookieSecrets = cookieSecrets // All servers get the same secret
 			err := t.startServer(srv)
 			if err != nil {

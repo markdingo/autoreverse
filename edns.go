@@ -138,9 +138,9 @@ const (
 // both to uint64 and add "SERIAL_BITS" to the "smaller" number. Then we just treat them
 // as regular integers.
 //
-// Returns true if the server cookie is valid. Regardless of validity, cookieOut is set
-// with the full cookie payload to send back to the client.
-func (t *request) validateOrGenerateCookie(secrets [2]uint64, unixTime int64) (valid bool) {
+// Sets cookieValid if the server cookie is valid. Regardless of validity, cookieOut is
+// always populated with the full cookie payload to send back to the client.
+func (t *request) validateOrGenerateCookie(secrets [2]uint64, unixTime int64) {
 	now := uint32(unixTime & 0xFFFFFFFF)
 	var now64, ts64 uint64
 	if len(t.serverCookie) == sCookieV1Length && // If it's a valid v1 cookie length
@@ -152,17 +152,15 @@ func (t *request) validateOrGenerateCookie(secrets [2]uint64, unixTime int64) (v
 		now64, ts64 = normalizeTimestamps(now, ts)
 		if (ts64+maxBehindGap > now64) && (now64+maxAheadGap) > ts64 { // in range?
 			t.cookieOut = genV1Cookie(secrets, ts, t.src.String(), t.clientCookie)
-			valid = bytes.Compare(t.serverCookie[:sCookieV1Length],
+			t.cookieValid = bytes.Compare(t.serverCookie[:sCookieV1Length],
 				t.cookieOut[8:8+sCookieV1Length]) == 0
 		}
 	}
 
 	// If invalid or getting old, reissue
-	if !valid || ts64+reissueGap < now64 {
+	if !t.cookieValid || ts64+reissueGap < now64 {
 		t.cookieOut = genV1Cookie(secrets, now, t.src.String(), t.clientCookie)
 	}
-
-	return
 }
 
 // normalizeTimestamps converts "serial number arithmetic" uint32s into regular comparable

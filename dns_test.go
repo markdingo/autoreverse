@@ -24,7 +24,7 @@ import (
 func TestDNSFormErr(t *testing.T) {
 	out := &mock.IOWriter{}
 	log.SetOut(out)
-	server := newServer(&config{logQueriesFlag: true}, database.NewGetter(), resolver.NewResolver(), "", "") // Make a skeletal server
+	server := newServer(&config{logQueriesFlag: true}, database.NewGetter(), resolver.NewResolver(), nil, "", "") // Make a skeletal server
 	t.Run("Empty Message", func(t *testing.T) { testInvalid(t, server, new(dns.Msg)) })
 
 	m := setQuestion(dns.ClassINET, dns.TypeSOA, "example.net.")
@@ -77,7 +77,7 @@ func TestDNSProbe(t *testing.T) {
 
 	res := resolver.NewResolver()
 	cfg := &config{logQueriesFlag: true}
-	server := newServer(cfg, database.NewGetter(), res, "", "")
+	server := newServer(cfg, database.NewGetter(), res, nil, "", "")
 	rand.Seed(0) // Make probe generation predictable
 	a1 := &authority{forward: true}
 	a1.Domain = "fozzy.example.net."
@@ -117,7 +117,7 @@ func TestDNSProbe(t *testing.T) {
 	}
 
 	// Check logging output
-	exp := `ru=REFUSED q=MX/example.org. s=127.0.0.2:4056 id=2 h=U sz=40/1232 C=0/0/1 Non-probe query during probe:out of bailiwick
+	exp := `ru=REFUSED q=MX/example.org. s=127.0.0.2:4056 id=2 h=U sz=40/1232 C=0/0/1 Non-probe query during probe:not in-domain
   Valid Probe received from 127.0.0.2:4056
 ru=ok q=AAAA/cubyh.fozzy.example.net. s=127.0.0.2:4056 id=1 h=U sz=103/1232 C=1/0/1 Probe match
 `
@@ -138,7 +138,7 @@ func TestDNSWrongClass(t *testing.T) {
 
 	res := resolver.NewResolver()
 	cfg := &config{logQueriesFlag: true}
-	server := newServer(cfg, database.NewGetter(), res, "", "")
+	server := newServer(cfg, database.NewGetter(), res, nil, "", "")
 	a := &authority{forward: true}
 	a.Domain = "example.net."
 	var auths authorities
@@ -196,7 +196,7 @@ func TestDNSServeBadPTR(t *testing.T) {
 
 	res := resolver.NewResolver()
 	cfg := &config{logQueriesFlag: true, synthesizeFlag: true}
-	server := newServer(cfg, database.NewGetter(), res, "", "")
+	server := newServer(cfg, database.NewGetter(), res, nil, "", "")
 	a1 := &authority{forward: true}
 	a1.Domain = "misc.example.net."
 	a2 := &authority{}
@@ -243,12 +243,12 @@ func TestDNSServeBadPTR(t *testing.T) {
 				"s=127.0.0.2:4056 id=1 h=U sz=203/1232 C=0/1/1 Trunc-qmin\n"},
 
 		{dns.TypePTR, "1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.e.f.f.f.d.2.d.f.ip6.arpa.", true,
-			dns.RcodeRefused, 0, 0, // Out-of-bailiwick
+			dns.RcodeRefused, 0, 0, // Not in-domain
 			"ru=REFUSED q=PTR/1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.e.f.f.f.d.2.d.f.ip6.arpa. " +
-				"s=127.0.0.2:4056 id=1 h=U sz=101/1232 C=0/0/1 out of bailiwick\n"},
+				"s=127.0.0.2:4056 id=1 h=U sz=101/1232 C=0/0/1 not in-domain\n"},
 
 		{dns.TypePTR, "1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.f.f.f.f.d.2.d.f.ip6.arpa.", false,
-			dns.RcodeNameError, 0, 1, // No Synth, but in-bailiwick, not alternative answers so SOA
+			dns.RcodeNameError, 0, 1, // No Synth, but in-domain, not alternative answers so SOA
 			"ru=NXDOMAIN q=PTR/1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.f.f.f.f.d.2.d.f.ip6.arpa. " +
 				"s=127.0.0.2:4056 id=1 h=U sz=207/1232 C=0/1/1 No Synth\n"},
 
@@ -301,7 +301,7 @@ func TestDNSMisc(t *testing.T) {
 	newDB := database.NewDatabase()
 	ar.loadFromChaos(newDB)
 	ar.dbGetter.Replace(newDB)
-	server := newServer(cfg, ar.dbGetter, res, "", "")
+	server := newServer(cfg, ar.dbGetter, res, nil, "", "")
 
 	a1 := &authority{}
 	a1.Domain = "misc.example.net."
@@ -428,7 +428,7 @@ func TestDNSGoodAnswers(t *testing.T) {
 	newDB := database.NewDatabase()
 	ar.loadFromAuthorities(newDB)
 	ar.dbGetter.Replace(newDB)
-	server := newServer(cfg, ar.dbGetter, res, "", "")
+	server := newServer(cfg, ar.dbGetter, res, nil, "", "")
 	server.setMutables("a.zig.", nil, ar.authorities)
 
 	var testCases = []struct {
@@ -502,7 +502,7 @@ func TestDNSGoodAnswers(t *testing.T) {
 func TestDNSAuthorityLookups(t *testing.T) {
 	soaTime = time.Unix(1357997531, 0) // Override time.Now() so SOA.Serial is a known value
 
-	// Create out-of-bailiwick and in-bailiwick name servers
+	// Create not in-domain and in-domain name servers
 	ns1, _ := dns.NewRR("autoreverse.example.net. IN NS ns1.example.org")
 	ns2, _ := dns.NewRR("autoreverse.example.net. IN NS ns2.autoreverse.example.net")
 	a1, _ := dns.NewRR("ns2.autoreverse.example.net IN A 192.168.0.1")
@@ -526,7 +526,7 @@ func TestDNSAuthorityLookups(t *testing.T) {
 		t.Error("Synthesized SOA mismatch. Got", got, "Expect", exp)
 	}
 
-	server := newServer(ar.cfg, ar.dbGetter, resolver.NewResolver(), "", "") // Make a skeletal server
+	server := newServer(ar.cfg, ar.dbGetter, resolver.NewResolver(), nil, "", "") // Make a skeletal server
 	server.authorities.append(auth)
 	wtr := &mock.ResponseWriter{}
 
@@ -695,7 +695,7 @@ func TestDNSAuthorityLookups(t *testing.T) {
 		t.Fatal("Setup failed")
 	}
 	if resp.Rcode != dns.RcodeRefused {
-		t.Error("Expected Refused for out-of-bailiwick NS lookup. got",
+		t.Error("Expected Refused for not in-domain NS lookup. got",
 			dnsutil.RcodeToString(resp.Rcode), "\n", resp)
 	}
 }
@@ -727,7 +727,7 @@ func TestDNSCookies(t *testing.T) {
 	newDB := database.NewDatabase()
 	ar.loadFromChaos(newDB)
 	ar.dbGetter.Replace(newDB)
-	server := newServer(cfg, ar.dbGetter, res, "", "")
+	server := newServer(cfg, ar.dbGetter, res, nil, "", "")
 	var auths authorities
 	server.setMutables("a.zig.", nil, auths)
 

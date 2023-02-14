@@ -8,7 +8,7 @@ import (
 type qTypeStats struct {
 	queries int // Type specific query count
 	good    int // Good replies sent back to client
-	answers int // Total answers sent in all good replies
+	answers int // Total RRs sent in all good replies
 
 	truncated   int // Returns from InvertPtr*
 	invertError int

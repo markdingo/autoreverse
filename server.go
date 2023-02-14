@@ -3,6 +3,7 @@ package main
 import (
 	"sync"
 
+	"github.com/markdingo/rrl"
 	"github.com/miekg/dns"
 
 	"github.com/markdingo/autoreverse/database"
@@ -43,9 +44,10 @@ func (t *server) getMutables() mutables {
 
 // server is created for each listen address.
 type server struct {
-	cfg      *config
-	resolver resolver.Resolver
-	dbGetter *database.Getter
+	cfg        *config
+	resolver   resolver.Resolver
+	dbGetter   *database.Getter
+	rrlHandler *rrl.RRL // May be nil if not configured
 
 	network string // Listen details
 	address string
@@ -61,13 +63,14 @@ type server struct {
 	cookieSecrets [2]uint64
 }
 
-func newServer(cfg *config, dbGetter *database.Getter, r resolver.Resolver, network, address string) *server {
+func newServer(cfg *config, dbGetter *database.Getter, r resolver.Resolver, rrlHandler *rrl.RRL, network, address string) *server {
 	t := &server{
-		cfg:      cfg,
-		resolver: r,
-		dbGetter: dbGetter,
-		network:  network,
-		address:  address,
+		cfg:        cfg,
+		resolver:   r,
+		dbGetter:   dbGetter,
+		rrlHandler: rrlHandler,
+		network:    network,
+		address:    address,
 	}
 
 	if len(t.network) == 0 {

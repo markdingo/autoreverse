@@ -47,7 +47,7 @@ func TestRun(t *testing.T) {
 	cfg.reportInterval = time.Second * 3
 	ar := newAutoReverse(cfg, nil)
 	ar.generateLocalForward("example.net.")
-	srv := newServer(cfg, database.NewGetter(), resolver.NewResolver(), "UDP", "[::1]:3053")
+	srv := newServer(cfg, database.NewGetter(), resolver.NewResolver(), nil, "UDP", "[::1]:3053")
 	ar.servers = append(ar.servers, srv)
 	ar.startServers()
 	go ar.Run()

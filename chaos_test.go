@@ -26,7 +26,7 @@ func TestDNSChaos(t *testing.T) {
 	newDB := database.NewDatabase()
 	ar.loadFromChaos(newDB)
 	ar.dbGetter.Replace(newDB)
-	server := newServer(cfg, ar.dbGetter, res, "", "")
+	server := newServer(cfg, ar.dbGetter, res, nil, "", "")
 
 	// First try with wrong type
 	query := setQuestion(dns.ClassCHAOS, dns.TypeNS, "version.bind.")
@@ -62,7 +62,7 @@ func TestDNSChaos(t *testing.T) {
 	}
 
 	// Check error logging
-	exp = "ru=REFUSED q=TXT/version.bind. s=127.0.0.2:4056 id=2 h=U sz=41/1232 C=0/0/1 out of bailiwick\n"
+	exp = "ru=REFUSED q=TXT/version.bind. s=127.0.0.2:4056 id=2 h=U sz=41/1232 C=0/0/1 not in-domain\n"
 	got = out.String()
 	if exp != got {
 		t.Error("Error log mismatch \n Got:", got, "Exp:", exp)

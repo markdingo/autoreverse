@@ -1,4 +1,4 @@
-.Dd January 25, 2022
+.Dd February 15, 2023
 .Dt AUTOREVERSE 8
 .Os
 .Sh NAME
@@ -36,15 +36,28 @@
 .Op Fl -log-minor
 .Op Fl -log-queries Ns = Ns Ar true
 .Op Fl -report Ar time.Duration=1h
+.Vt
+.Op Fl -rrl-dryrun
+.Op Fl -rrl-ipv4-CIDR Ar length
+.Op Fl -rrl-ipv6-CIDR Ar length
+.Op Fl -rrl-max-table-size Ar size
+.Op Fl -rrl-window Ar size
+.Op Fl -rrl-slip-ratio Ar ratio
+.Op Fl -rrl-errors-psec Ar allowance
+.Op Fl -rrl-nodata-psec Ar allowance
+.Op Fl -rrl-nxdomain-psec Ar allowance
+.Op Fl -rrl-referrals-psec Ar allowance
+.Op Fl -rrl-requests-psec Ar allowance
+.Op Fl -rrl-responses-psec Ar allowance
 .Pp
 The
 .Ql \[u2026]
 symbol indicates options which can be specified multiple times.
-.
 .Sh DESCRIPTION
 .Nm
-is a specialized authoritative DNS server whose goal is to make it as easy as possible to
-auto-answer reverse queries without ever requiring reverse zone files.
+is a specialized authoritative DNS server whose goal is to make it as easy as
+possible to auto-answer reverse queries without ever requiring reverse zone
+files.
 .Nm
 synthesizes reverse answers and automatically derives
 .Sy PTR
@@ -53,24 +66,25 @@ Importantly,
 .Nm
 automatically answers
 .Em forward
-queries corresponding to the synthetic reverse answers, meeting the requirements of many
-remote services which insist on matching forward and reverse names.
+queries corresponding to the synthetic reverse answers, meeting the requirements
+of many remote services which insist on matching forward and reverse names.
 .Pp
 .Nm
-is designed to run on residential gateway routers and servers behind NATs which acquire
-ISP-assigned addresses via DHCP or SLAAC, but it also runs on publicly accessible servers
-with static network configurations.
+is designed to run on residential gateway routers and servers behind NATs which
+acquire ISP-assigned addresses via DHCP or SLAAC, but it also runs on publicly
+accessible servers with static network configurations.
 .Pp
 On start-up,
 .Nm
 extracts forward and reverse delegation details from the DNS to synthesize its
 .Ql Zones of Authority .
-This approach to gleaning information from the DNS represents an over-arching philosophy
-of
+This approach to gleaning information from the DNS represents an over-arching
+philosophy of
 .Nm
 in that it
 .Em never
-requires configuration material which duplicates that already present in the DNS.
+requires configuration material which duplicates that already present in the
+DNS.
 This approach is suggested in rfc8501, Section 2.5
 .Sy [RFC8501] .
 .Pp
@@ -125,7 +139,8 @@ Run-time Options are:
 .It Fl -CHAOS Op =false
 Answer
 .Sy CHAOS TXT
-queries for version.bind, version.server, authors.bind, hostname.bind and id.server.
+queries for version.bind, version.server, authors.bind, hostname.bind and
+id.server.
 The default is
 .Sy true .
 .
@@ -135,8 +150,8 @@ Respond to
 sub-option requests with the specified
 .Ar hostid .
 .Nm
-manages the hexadecimal conversion implicitly so this option should be set as a regular
-string, e.g.
+manages the hexadecimal conversion implicitly so this option should be set as a
+regular string, e.g.
 .Ql --NSID\~a.ns.example.net .
 .
 .It Fl -PTR-deduce Ar URL
@@ -157,15 +172,15 @@ and
 .Pp
 In all cases, address and
 .Sy PTR
-records are only considered if they are in-bailiwick of
+records are only considered if they are in-domain of
 .Fl -reverse
 or
 .Fl -local-reverse
 zones.
 .Pp
 .Sy CNAME RRs
-are resolved while loading zones, thus if a CNAME resolves to an in-bailiwick reverse
-address it's included as a preferred response to PTR queries.
+are resolved while loading zones, thus if a CNAME resolves to an in-domain
+reverse address it's included as a preferred response to PTR queries.
 A classic use of this is when you have a CNAME to a
 .Sy RIPE
 Atlas probe such as:
@@ -185,7 +200,8 @@ scheme URLs must be relative to the chroot directory.
 .Pp
 The reload strategy varies with the URL scheme:
 .Ql file
-periodically detects Date-Time-Modified changes while the other schemes rely on the
+periodically detects Date-Time-Modified changes while the other schemes rely on
+the
 .Sy SOA
 .Ql Refresh
 value expiring.
@@ -251,15 +267,16 @@ This obviously affects
 .Ql file
 URLs given to
 .Fl -PTR-deduce
-but it also potentially impacts name resolution which often relies on files such as
+but it also potentially impacts name resolution which often relies on files such
+as
 .Sy /etc/resolv.conf .
 In other words, if not properly established,
 .Fl -chroot
 can cause name resolution to fail.
 .Pp
 .Nm
-defers all zone loading and discovery until after process privileges are reduced so any
-problems with chroot and friends are exposed at start up.
+defers all zone loading and discovery until after process privileges are reduced
+so any problems with chroot and friends are exposed at start up.
 .
 .It Fl -forward Ar Domain
 The forward zone to discover and serve.
@@ -273,9 +290,10 @@ be delegated to an
 listening address.
 .Pp
 .Nm
-queries the DNS to extract delegation details for this zone from the parent zone.
-If one of the zone name servers self-identifies, as determined by DNS Probing, the zone is
-accepted as a
+queries the DNS to extract delegation details for this zone from the parent
+zone.
+If one of the zone name servers self-identifies, as determined by DNS Probing,
+the zone is accepted as a
 .Ql Zone of Authority .
 If the zone does not self-identify,
 .Nm
@@ -371,8 +389,9 @@ arbitrarily serves the domain and uses it as a suffix for synthetic
 generation.
 .Pp
 .Ar Domain
-represents a zone which is not expected to be visible in the public DNS and is thus only
-visible locally where local resolvers are configured to direct such queries to
+represents a zone which is not expected to be visible in the public DNS and is
+thus only visible locally where local resolvers are configured to direct such
+queries to
 .Nm .
 .Pp
 Only one of
@@ -398,8 +417,9 @@ arbitrarily serves the reverse domain.
 .Pp
 The
 .Sy CIDR
-represents a zone which is not expected to be visible in the public DNS and is thus only
-visible locally where local resolvers are configured to direct reverse queries to
+represents a zone which is not expected to be visible in the public DNS and is
+thus only visible locally where local resolvers are configured to direct reverse
+queries to
 .Nm .
 How this redirection is achieved varies greatly depending on the local resolver.
 .Pp
@@ -428,12 +448,13 @@ The
 option can be specified multiple times.
 .It Fl -log-major Op =false
 Log major events to Stdout.
-Major events are rare events which are something you normally want to know about.
+Major events are rare events which are something you normally want to know
+about.
 The default is
 .Sy true .
 .Pp
-Most major events are start-up related,
-although there are some on-going major events such as periodic statistics report.
+Most major events are start-up related, although there are some on-going major
+events such as periodic statistics report.
 There is no good reason to set
 .Fl -log-major
 to false unless you absolute cannot tolerate
@@ -445,8 +466,8 @@ Log minor events to Stdout.
 Minor events are an elaboration of major events logged by
 .Fl -log-major
 which provide additional insights behind the event.
-Generally minor event logging is useful when you're trying to diagnose an unexpected major
-event.
+Generally minor event logging is useful when you're trying to diagnose an
+unexpected major event.
 Setting
 .Fl -log-minor
 implies setting
@@ -456,8 +477,8 @@ The default is
 .
 .It Fl log-debug Op =true
 Log extensive diagnostic material - mostly discovery related.
-Most likely of use to developers or sysadmins who are prepared to correlate log details
-with source code to evaluate the behaviour of
+Most likely of use to developers or sysadmins who are prepared to correlate log
+details with source code to evaluate the behaviour of
 .Nm .
 Setting
 .Fl -log-debug
@@ -467,8 +488,8 @@ and
 .Fl -log-minor .
 .It Fl -log-queries
 Write a one line summary of each query to Stdout.
-The output is intended to be amenable to programmatic post-processing and statistics
-gathering, but still somewhat human-friendly.
+The output is intended to be amenable to programmatic post-processing and
+statistics gathering, but still somewhat human-friendly.
 On busy systems this option should probably be set to
 .Sy false
 unless you wish to generate voluminous log files.
@@ -482,8 +503,8 @@ The default is
 Maximum
 .Sy PTRs
 to allow in a response.
-This further limits response sizes below the maximum allowed by the query and system
-defaults.
+This further limits response sizes below the maximum allowed by the query and
+system defaults.
 .Pp
 This limit only applies to potential multiple
 .Sy PTRs
@@ -500,16 +521,16 @@ are placed in the response within size limits.
 The default is
 .Sy 5 .
 .It Fl -passthru Ar auth-server
-Proxy out-of-bailiwick
-queries to the
+Proxy not in-domain queries to the
 .Ar auth-server .
 .Pp
 .Sy THIS IS AN EXPERIMENTAL FEATURE - USE WITH CAUTION.
 .Pp
-Normally out-of-bailiwick queries generated a
+Normally not in-domain queries generate a
 .Sy REFUSED
 DNS response.
-However, with this option set, out-of-bailiwick queries are proxied unmodified to the
+However, with this option set, not in-domain queries are proxied unmodified to
+the
 .Ar auth-server
 using the same network type the query came in, i.e.
 .Sy UDP
@@ -536,8 +557,8 @@ will not match those sent by
 which means clients will see
 .Sy two
 DNS Cookies from the same server IP address.
-Since clients only retain the most recent DNS Cookie they are likely to send back the
-wrong one when sending queries which are sometimes answered by
+Since clients only retain the most recent DNS Cookie they are likely to send
+back the wrong one when sending queries which are sometimes answered by
 .Nm
 and other times answered by the
 .Ar auth-server .
@@ -557,7 +578,8 @@ The minimum value is 1s and the default is
 Defines the starting point within the reverse zone to discover and serve.
 .Pp
 .Nm
-ascends the reverse DNS tree from the starting point to discover the zone delegated to
+ascends the reverse DNS tree from the starting point to discover the zone
+delegated to
 .Nm
 as determined by DNS Probing.
 If the zone cannot be verified by probing,
@@ -569,7 +591,7 @@ processes
 .Fl -reverse
 .Em after
 .Fl -forward
-which means reverse delegations can refer to in-bailiwick forward name servers and
+which means reverse delegations can refer to in-domain forward name servers and
 .Nm
 correctly responds to SOA related queries as part of the reverse discovery.
 .Pp
@@ -587,7 +609,8 @@ If a
 .Sy PTR
 query cannot be satisfied from
 .Fl PTR-deduce
-zones, a synthetic response is generated based on the domain name of the forward zone.
+zones, a synthetic response is generated based on the domain name of the forward
+zone.
 If set false
 .Sy NXDomain
 is returned for missing
@@ -604,10 +627,80 @@ In conjunction with
 .Fl -group
 and
 .Fl -chroot ,
-this option removes root privileges and restricts access to other system components.
+this option removes root privileges and restricts access to other system
+components.
 .Nm
 must start as root for this option to succeed.
 .
+.El
+.Pp
+Response Rate Limiting (or
+.Sy [RRL] )
+is only activated when at least one of the
+.Fl -rrl-*-psec
+options are set.
+.Sy RRL
+actions are shown on the 'ru=' field of logged queries with '/D'
+and '/S' representing Drop and Slip respectively.
+.Bl -tag -width indent
+.It Fl -rrl-dryrun
+Invoke RRL analysis but ignore any recommended action.
+This allows for testing various RRL settings without inadvertently
+triggering drops or slippage.
+Logged queries still show what RRL action would have occurred if this
+option was not set.
+.It Fl -rrl-max-table-size Ar size
+The maximum number of responses to be tracked at one time.
+When exceeded,
+.Sy RRL
+stops rate limiting new responses.
+The default is 100000.
+.It Fl -rrl-window Ar size
+Seconds during which response rates are tracked.
+The default is 15.
+.It Fl -rrl-slip-ratio Ar ratio
+The ratio of rate-limited responses given a truncated response over a dropped
+response.
+A ratio of 0 disables slip processing and thus all rate-limited responses are
+drop.
+A ratio of 1 means every rate-limited response will be a truncated response and
+the upper limit of 10 means 1 in every 10 rate-limited responses will be a
+truncated with the remaining 9 being dropped.
+The default is 2.
+.It Fl -rrl-errors-psec Ar allowance-per-second
+The number of Error responses allowed per second (excluding NXDomain).
+An allowance of 0 disables Error rate limiting.
+The default is
+.Fl -rrl-responses-psec .
+.It Fl -rrl-nodata-psec Ar allowance-per-second
+The number of NoData responses allowed per second.
+An allowance of 0 disables NoData rate limiting.
+The default is
+.Fl -rrl-responses-psec .
+.It Fl -rrl-nxdomain-psec Ar allowance-per-second
+The number of NXDomain responses allowed per second.
+An allowance of 0 disables NXDomain rate limiting.
+The default is
+.Fl -rrl-responses-psec .
+.It Fl -rrl-referrals-psec Ar allowance-per-second
+The number of Referral responses allowed per second.
+An allowance of 0 disables Referral rate limiting.
+The default is
+.Fl -rrl-responses-psec .
+.It Fl -rrl-requests-psec Ar allowance-per-second
+The number requests allowed per second from a source IP.
+An allowance of 0 disables rate limiting of requests.
+This value applies solely to the claimed source IP of the query (as masked by
+.Fl -rrl-*-CIDR )
+whereas all other settings apply to the response details.
+The default is 0.
+.It Fl -rrl-responses-psec Ar allowance-per-second
+The number of Answer responses allowed per second.
+If simple RRL processing is desired, this is the main option to set.
+It defines the upper limit of your acceptable query rate and is the
+default value used by most other RRL options.
+An allowance of 0 disables Answer rate limiting.
+The default is 0.
 .\" The follow El macro terminates the options list started *way* up there with a Bl. It's not
 .\" some macro that is accidentally here (which is what I think each time I see it)
 .
@@ -628,8 +721,9 @@ responds to the following signals:
 .Sh GETTING STARTED
 Since
 .Nm
-relies on the forward and reverse delegation details to deduce its own zone information,
-the first step is to add those delegation details into the global DNS.
+relies on the forward and reverse delegation details to deduce its own zone
+information, the first step is to add those delegation details into the global
+DNS.
 Here is an example of the recommended snippet for your forward zone:
 .Bd -literal -offset indent
 $ORIGIN yourdomain.
@@ -640,8 +734,9 @@ autoreverse IN NS   autoreverse
 ;;
 .Ed
 .Pp
-Reverse delegation is typically managed by your ISP or address assignment provider so
-normally you arrange with them to configure the reverse name server as:
+Reverse delegation is typically managed by your ISP or address assignment
+provider so normally you arrange with them to configure the reverse name server
+as:
 .Ql autoreverse.yourdomain
 to match the
 .Ql NS
@@ -683,8 +778,9 @@ up the DNS until it finds responding parents or reaches the upper reaches of the
 DNS.
 This
 .Ql walking
-process is important because there are (uncommonly) gaps between child and parent zones in
-the forward direction, while such gaps are very common in the reverse direction.
+process is important because there are (uncommonly) gaps between child and
+parent zones in the forward direction, while such gaps are very common in the
+reverse direction.
 .Ql Walking
 skips over those gaps to discover the delegation material.
 .Pp
@@ -711,8 +807,8 @@ This is a convoluted way of saying that
 determines if it is one of the delegated name servers.
 You might think that
 .Nm
-could simply compare interface addresses against the delegation details and accept a match
-as
+could simply compare interface addresses against the delegation details and
+accept a match as
 .Ql proof ,
 but that doesn't work in a proxy or port forwarding or NAT environment.
 Thus
@@ -723,7 +819,7 @@ relies on the stronger proof of a
 .Nm
 answers
 .Sy PTR
-queries for in-bailiwick zones with synthetic and matching forward names.
+queries for in-domain zones with synthetic and matching forward names.
 For example a
 .Sy PTR
 query might produce the following response:
@@ -745,14 +841,15 @@ and
 This automatic forward and reverse matching is perhaps the main reason for
 deploying
 .Nm
-as it helps meet the requirements of many logging and checking systems which insist on
-matching entries;
+as it helps meet the requirements of many logging and checking systems which
+insist on matching entries;
 .Xr sshd 8
 and
 .Xr dovecot 1
 IMAP and POP3 servers being prominent examples.
 .Ss INTERMIXING
-A common scenario is where you want to intermix configured names with synthetic names in
+A common scenario is where you want to intermix configured names with synthetic
+names in
 .Sy PTR
 responses.
 This is the purpose of
@@ -796,8 +893,8 @@ queries with:
 .Ed
 .
 .Sh EXAMPLES
-Few use-cases require such a complicated invocation, but this example demonstrates less
-common features:
+Few use-cases require such a complicated invocation, but this example
+demonstrates less common features:
 .Bd -literal -offset indent
 # autoreverse --forward autoreverse.mydomain --reverse 2001:db8::/64
                --log-query=false --NSID Host:`hostname` --CHAOS=false
@@ -818,16 +915,107 @@ less-privileged daemon.
 .Pp
 This invocation also supplies the hostname in response to any query containing
 the NSID option.
-Finally, out-of-bailiwick queries are passed thru to a name server presumed to be
+Finally, not in-domain queries are passed thru to a name server presumed to be
 listening on 127.0.0.1 which allows
 .Nm
 to proxy or answer all inbound queries.
 .
+.Sh STATISTICS
+This section describes the statistic periodically logged by
+.Nm .
+All such lines are prefixed by
+.Dq Stats .
+.Ss Total
+.Bd -literal -offset indent
+Total q=a/b/c/d C=e/f/g/h gen=i/j/k/l/m auth=n/o/p tc=q/r db=s/t/u/v synth=w/x/y sr=z/A/B/C
+.Pp
+q=Queries
+   a Total Queries
+   b Bad Requests
+   c CHAOS queries
+   d With NSID
+C=Cookies
+   e With Server Cookie
+   f Cookie Only (Very rare)
+   g Wrong Cookie (expired)
+   h Malformed Cookie
+gen=General
+   i Passthru Out
+   j Passthru In
+   k CHAOS Refused
+   l No Authority
+   m Wrong Class
+auth=Authority Zone Queries
+   n ANY
+   o SOA
+   p NS
+tc=Truncated
+   q ipv4
+   r ipv6
+db=Answers from Zone Databases
+   s Served from DB
+   t NoError from DB
+   u NXDomain from DB
+   v FormErr from DB
+synth=Synthesized Answer
+   w=Forward Domain
+   x=Reverse Domain
+   y=Not synthesized
+sr=Synthesized Result
+   z=Served
+   A=NoError
+   B=NXDomain
+   C=FormErr
+.Ed
+.Ss Ptr and Forward
+.Bd -literal -offset indent
+A Ptr q=a good=b(c) trunc=d invErr=e
+AAAA Ptr q=a good=b(c) trunc=d invErr=e
+A Forward q=a good=b(c) trunc=0 invErr=e
+AAAA Forward q=a good=b(c) trunc=0 invErr=e
+.Pp
+   a=queries
+   b=Good responses
+   c=Good RRs in Answer Section
+   d=Well formed but truncated, likely qname minimization
+   e=Reverse qName is not an inverted IP Address
+.Ed
+.Ss RRL
+.Bd -literal -offset indent
+RRL RPS a/b/c/d/e Actions f/g/h IPR i/j/k/l/m RTR n/o/p/q/r/s L=t/u
+.Pp
+RPS=Allowance used per second
+   a=Answers>0		(AllowanceAnswer)
+   b=Authority>0	(AllowanceReferral)
+   c=NOData		(AllowanceNoData)
+   d=NXDomain		(AllowanceNXDomain)
+   e=Error		(AllowanceError)
+Actions=Recommended action
+   f=Send
+   g=Drop
+   h=Slip
+IPR=IP Reasons
+   i=Ok
+   j=Not Configured (--rrl-requests-psec)
+   k=Not Reached (future counter)
+   l=Rate Limited
+   m=Cache Full
+RTR=Response Tuple Reasons
+   n=Ok
+   o=Not Configured (--rrl-*-psec)
+   p=Not Reached (future counter)
+   q=Rate Limited
+   r=Not UDP (RRL does not apply)
+   s=Cache Full
+L=Cache
+   t=Average Cache Size
+   u=Evictions
+.Ed
 .Sh PERFORMANCE
 While
 .Nm
-is not particularly designed with performance in mind, it is interesting to note the
-performance and concurrency impact of a
+is not particularly designed with performance in mind, it is interesting to note
+the performance and concurrency impact of a
 .Sy go [golang]
 implementation.
 A number of tests were run with
@@ -849,8 +1037,8 @@ Since
 .Xr dnsperf 1
 was run on the
 .Em same
-system, exchanging queries via loopback, these results should be viewed as indicative
-rather than definitive.
+system, exchanging queries via loopback, these results should be viewed as
+indicative rather than definitive.
 .Nm
 was run with
 .Fl -log-queries=false
@@ -868,19 +1056,21 @@ during these tests but it was otherwise a normal invocation.
 .It Li [RFC4193] Ta ipv6 Private Addresses Ta https://datatracker.ietf.org/doc/html/rfc4193
 .It Li [RFC7873] Ta DNS Cookies Ta https://datatracker.ietf.org/doc/html/rfc7873
 .It Li [RFC8501] Ta Reverse DNS in IPv6 Ta https://datatracker.ietf.org/doc/html/rfc8501#section-2.5
+.It Li [RRL] Ta Response Rate Limiting Ta https://kb.isc.org/docs/aa-01000
 .El
 .
 .Sh FUTURE
 .Ss Fl -cache-directory Ar path
-Relying on access to the global DNS during start-up may cause difficulties in some
-environments (though if connectivity is a problem, inbound queries are unlikely to arrive
-anyway...).
+Relying on access to the global DNS during start-up may cause difficulties in
+some environments (though if connectivity is a problem, inbound queries are
+unlikely to arrive anyway...).
 .Pp
 In such cases it may be sensible for
 .Nm
 to cache delegation material and
 .Fl -PTR-deduce
-zones to use as a fallback during start-up if current information is inaccessible.
+zones to use as a fallback during start-up if current information is
+inaccessible.
 Cache information could be refreshed when fetched and deleted if the source
 authoritatively says it no longer exists.
 .Sh HISTORY
@@ -891,8 +1081,8 @@ development was triggered by a local ISP (ABB) offering free
 /48
 .Sy ipv6
 allocations.
-Importantly, they also supported free reverse delegation to home and small business
-accounts which is where
+Importantly, they also supported free reverse delegation to home and small
+business accounts which is where
 .Nm
 comes in handy.
 .

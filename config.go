@@ -5,6 +5,7 @@ import (
 	"runtime/debug"
 	"time"
 
+	"github.com/markdingo/rrl"
 	"github.com/miekg/dns"
 
 	"github.com/markdingo/autoreverse/dnsutil"
@@ -51,6 +52,24 @@ type PTRZone struct {
 	lines, added, oob int
 }
 
+// rrlConfigStrings separates out the RRL options from all the rest for easy management
+// and identification.
+type rrlConfigStrings struct {
+	window       string // "--rrl-window"
+	slipRatio    string // "--rrl-slip-ratio"
+	maxTableSize string // "--rrl-max-table-size"
+
+	ipv4PrefixLength string // "--rrl-ipv4-CIDR"
+	ipv6PrefixLength string // "--rrl-ipv6-CIDR"
+
+	responsesInterval string // "--rrl-responses-psec"
+	nodataInterval    string // "--rrl-nodata-psec"
+	nxdomainsInterval string // "--rrl-nxdomains-psec"
+	referralsInterval string // "--rrl-referrals-psec"
+	errorsInterval    string // "--rrl-errors-psec"
+	requestsInterval  string // "--rrl-requests-psec"
+}
+
 // config defines the global configuration settings used by autoreverse. These setting
 // apply across the whole program and all servers. Once set it should never be changed as
 // it is shared amongst go-routines without an lock protections.
@@ -88,6 +107,11 @@ type config struct {
 	listen []string // All addresses to listen on
 
 	PTRZones []*PTRZone // Populated from PTRDeduceURLs
+
+	rrlOptions   rrlConfigStrings // Set by flags package
+	rrlOptionSet bool             // True if at least one rrl option was set
+	rrlDryRun    bool             // "--rrl-dryrun"
+	rrlConfig    *rrl.Config      // Populated if RRL is active
 }
 
 func newConfig() *config {
@@ -96,6 +120,8 @@ func newConfig() *config {
 	if ok {
 		t.projectURL = info.Main.Path // Override with embedded if present
 	}
+
+	t.rrlConfig = rrl.NewConfig() // This default config is a no-op
 
 	return t
 }

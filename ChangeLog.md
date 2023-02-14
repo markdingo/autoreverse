@@ -1,3 +1,5 @@
+### v1.4.0 - 2023-02-14
+  * Added RRL support with https://github.com/markdingo/rrl
 # autoreverse Change Log
   * Replace dns.MsgAcceptFunc to ensure rfc7873#5.4 queries are accepted
 ### v1.3.0 - 2022-02-10

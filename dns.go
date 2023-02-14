@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/markdingo/miekgrrl"
+	"github.com/markdingo/rrl"
 	"github.com/miekg/dns"
 
 	"github.com/markdingo/autoreverse/dnsutil"
@@ -50,7 +52,7 @@ func (t *server) ServeDNS(wtr dns.ResponseWriter, query *dns.Msg) {
 	defer t.addStats(&req.stats) // Add req.stats to t.stats
 
 	// Validate query. Extra can have EDNS options so don't length check that slice.
-	// As of RFC7873 a query with no questions and a COOKIE OPT is valid (#5.4).
+	// As of RFC7873#5.4 a query with no questions and a well formed COOKIE OPT.
 	//
 	// miekg.DefaultMsgAcceptFunc does some checking prior to the query arriving here,
 	// but we are slightly more paranoid.
@@ -67,9 +69,8 @@ func (t *server) ServeDNS(wtr dns.ResponseWriter, query *dns.Msg) {
 		req.stats.gen.nsid++
 	}
 
-	// We don't take any action based on cookies yet apart from exchange them with
-	// clients and note whether they are correct or not. Mostly this is laying the
-	// ground-work so that it's easy to add differentiation later.
+	// Check for valid cookies and generate a server cookie if requested. A valid
+	// inbound server cookie bypasses RRL test in WriteMsg().
 
 	req.findCookies()
 	if req.cookiesPresent {
@@ -80,7 +81,8 @@ func (t *server) ServeDNS(wtr dns.ResponseWriter, query *dns.Msg) {
 			req.stats.gen.malformedCookie++
 			return
 		}
-		if !req.validateOrGenerateCookie(t.cookieSecrets, time.Now().Unix()) {
+		req.validateOrGenerateCookie(t.cookieSecrets, time.Now().Unix())
+		if !req.cookieValid {
 			if len(req.serverCookie) > 0 {
 				req.addNote("Server cookie mismatch")
 				req.stats.gen.wrongCookie++
@@ -130,7 +132,7 @@ func (t *server) ServeDNS(wtr dns.ResponseWriter, query *dns.Msg) {
 	//
 	// 1. Probe
 	// 2. Chaos via database
-	// 3. In-Bailiwick or Passthru
+	// 3. In-domain or Passthru
 	// 4. Not ClassINET
 	// 5. Special Authority Queries (SOA, NS, ANY)
 	// 6. Database
@@ -176,14 +178,14 @@ func (t *server) ServeDNS(wtr dns.ResponseWriter, query *dns.Msg) {
 		return
 	}
 
-	// Dispatch 3. In-Bailiwick or Passthru
+	// Dispatch 3. In-domain or Passthru
 	req.setAuthority()
 	if req.auth == nil { // One of our domains?
 		if len(t.cfg.passthru) > 0 { // Nope - do we passthru?
 			t.passthru(wtr, req)
 			return
 		}
-		req.addNote("out of bailiwick")
+		req.addNote("not in-domain")
 		t.serveRefused(wtr, req)
 		req.stats.gen.noAuthority++
 		return
@@ -261,6 +263,12 @@ func (t *server) ServeDNS(wtr dns.ResponseWriter, query *dns.Msg) {
 	// If synthesize is allowed the pending results of the previous call to
 	// serveDatabase() are overridden, otherwise they'll stand. Synthesis is only
 	// allowed if configured *and* if the qName is a child of the Authority.
+	//
+	// Regardless of the outcome, from an RRL perspective the origin name now needs to
+	// be set to indicate a synthentic name below the authoritative domain.
+
+	req.rrlOriginName = "*." + req.auth.Domain
+
 	if t.cfg.synthesizeFlag && len(req.qName) > len(req.auth.Domain) {
 		if req.auth.forward {
 			pending = t.serveForward(wtr, req)
@@ -416,7 +424,7 @@ func (t *server) serveA(wtr dns.ResponseWriter, req *request) serveResult {
 	}
 
 	// If ip is not in-bailwick of our reverse zones then NXDomain
-	if req.authorities.findIPInBailiwick(ip) == nil {
+	if req.authorities.findIPInDomain(ip) == nil {
 		return NXDomain
 	}
 
@@ -459,7 +467,7 @@ func (t *server) serveAAAA(wtr dns.ResponseWriter, req *request) serveResult {
 	}
 
 	// If ip is not in-bailwick of our reverse zones then NXDomain
-	if req.authorities.findIPInBailiwick(ip) == nil {
+	if req.authorities.findIPInDomain(ip) == nil {
 		return NXDomain
 	}
 
@@ -494,10 +502,10 @@ func (t *server) serveAAAA(wtr dns.ResponseWriter, req *request) serveResult {
 //
 // As with serveForward() most of this code is dealing with malformed queries and
 // determining what the correct response is. E.g. chopping a few nibbles off the front of
-// an ip6.arpa query can easily still be in-bailiwick resulting in NOError whereas the
+// an ip6.arpa query can easily still be in-domain resulting in NOError whereas the
 // same thing for in-addpr.arpa will almost certainly be NXDomain.
 //
-// Since qName is known to be in-bailiwick of a reverse authority and since this function
+// Since qName is known to be in-domain of a reverse authority and since this function
 // is called *after* database lookup attempts, cases to handle are:
 //
 // 1. Uninvertible IPs such as those with impossible hex characters - serve NXDomain
@@ -566,8 +574,9 @@ func (t *server) serveReverse(wtr dns.ResponseWriter, req *request) serveResult 
 	return serveDone
 }
 
-// writeMsg finalized the output message with all of the common processing then calls
-// the response writer to send the message. Any error is recorded in req.logError
+// writeMsg finalized the output message with all of the common processing, checks with
+// RRL to see if the response is rate-limited and then potentially calls the response
+// writer to send the message. Any error is recorded in req.logError
 func (t *server) writeMsg(wtr dns.ResponseWriter, req *request) {
 	opt := req.genOpt()
 	if opt != nil {
@@ -580,8 +589,36 @@ func (t *server) writeMsg(wtr dns.ResponseWriter, req *request) {
 	req.compressed = req.response.Compress
 	req.truncated = req.response.MsgHdr.Truncated
 
-	err := wtr.WriteMsg(req.response)
-	if err != nil {
-		req.logError = fmt.Errorf("WriteMsg failed: %s", dnsutil.ShortenLookupError(err))
+	// Only call RRL (if it's active) and for sources which can be spoofed
+	action := rrl.Send
+	if t.rrlHandler != nil && req.network != dnsutil.TCPNetwork && !req.cookieValid {
+		rt := miekgrrl.Derive(req.response, req.rrlOriginName) // Make ResponseTuple from response Msg
+		req.rrlAction, _, _ = t.rrlHandler.Debit(req.src, rt)
+		if !t.cfg.rrlDryRun {
+			action = req.rrlAction // We're doing RRL for reals
+		}
+	}
+
+	switch action {
+	case rrl.Send:
+		err := wtr.WriteMsg(req.response)
+		if err != nil {
+			req.logError = fmt.Errorf("WriteMsg failed: %s", dnsutil.ShortenLookupError(err))
+		}
+
+	case rrl.Drop:
+
+	case rrl.Slip:
+		if req.cookieWellFormed { // Override whatever the original rcode was
+			req.response.SetRcode(req.query, dns.RcodeBadCookie)
+		} else {
+			req.response.MsgHdr.Truncated = true // Not sure if this should be set with bad cookie
+		}
+		req.response.Ns = []dns.RR{} // In all cases remove any req.response material
+		req.response.Answer = []dns.RR{}
+		err := wtr.WriteMsg(req.response)
+		if err != nil {
+			req.logError = fmt.Errorf("WriteMsg failed: %s", dnsutil.ShortenLookupError(err))
+		}
 	}
 }

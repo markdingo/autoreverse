@@ -107,4 +107,9 @@ func (t *autoReverse) statsReport(resetCounters bool) {
 	log.Major("Stats: AAAA Ptr ", totals.AAAAPtr.String())
 	log.Major("Stats: A Forward ", totals.AForward.String())
 	log.Major("Stats: AAAA Forward ", totals.AAAAForward.String())
+
+	if t.rrlHandler != nil {
+		rrlStats := t.rrlHandler.GetStats(resetCounters)
+		log.Major("Stats: RRL ", rrlStats.String())
+	}
 }

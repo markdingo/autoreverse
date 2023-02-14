@@ -26,7 +26,7 @@ func TestPassthru(t *testing.T) {
 
 	res := resolver.NewResolver()
 	cfg := &config{logQueriesFlag: true, passthru: ptServer}
-	server := newServer(cfg, database.NewGetter(), res, "", "")
+	server := newServer(cfg, database.NewGetter(), res, nil, "", "")
 
 	// First query without anything listening - this will show in the logs
 	query := setQuestion(dns.ClassINET, dns.TypeNS, "ns.example.net.")

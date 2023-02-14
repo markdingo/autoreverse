@@ -5,6 +5,7 @@ import (
 	"net"
 	"strings"
 
+	"github.com/markdingo/rrl"
 	"github.com/miekg/dns"
 
 	"github.com/markdingo/autoreverse/database"
@@ -29,6 +30,7 @@ type request struct {
 
 	cookiesPresent   bool   // Cookie sub-option is present in opt
 	cookieWellFormed bool   // Lengths are valid - only ever set if cookiesPresent is true
+	cookieValid      bool   // Server cookie is valid *and* current - only ever set if cookieWellFormed is true
 	clientCookie     []byte // Copied and hex decoded from OPT regardless of cookieWellFormed
 	serverCookie     []byte // Ditto
 
@@ -49,6 +51,9 @@ type request struct {
 	compressed bool
 	truncated  bool
 
+	rrlOriginName string     // Only set for synthesized answers
+	rrlAction     rrl.Action // Returned from rrl.Debit for logging purposes
+
 	// To avoid holding a lock for the whole query, stats are accumulated in a
 	// separate copy and added back into the aggregate server stats at the end. This
 	// means that most of the dns query runs lock free, but it's at the expense of a
@@ -62,7 +67,7 @@ type request struct {
 
 // newRequest is a nice-to-use constructor. The zero form works just fine.
 func newRequest(query *dns.Msg, src net.Addr, network string) *request {
-	return &request{query: query, response: new(dns.Msg), src: src, network: network}
+	return &request{query: query, response: new(dns.Msg), src: src, network: network, rrlAction: rrl.ActionLast}
 }
 
 // addNote does nothing more than append the supplied string to the note slice. That
@@ -97,8 +102,14 @@ func (t *request) log() {
 	} else {
 		rcodeStr = dnsutil.RcodeToString(t.response.MsgHdr.Rcode)
 	}
+	switch t.rrlAction {
+	case rrl.Drop:
+		rcodeStr += "/D"
+	case rrl.Slip:
+		rcodeStr += "/S"
+	}
 
-	hFlags := make([]byte, 0, 10) // 'h' = humongous?
+	hFlags := make([]byte, 0, 20) // 'h' = humongous?
 	if t.network == dnsutil.TCPNetwork {
 		hFlags = append(hFlags, 'T')
 	} else {
@@ -117,7 +128,10 @@ func (t *request) log() {
 		hFlags = append(hFlags, 'e')
 	}
 	if t.cookieWellFormed {
-		hFlags = append(hFlags, 'E')
+		hFlags = append(hFlags, 'E') // OPT is well formed
+	}
+	if t.cookieValid {
+		hFlags = append(hFlags, 'c') // At a minimum the client cookie is valid
 	}
 	if len(t.serverCookie) > 0 {
 		hFlags = append(hFlags, 's')
@@ -133,5 +147,5 @@ func (t *request) log() {
 // setAuthority sets the authority for the current query if it's in-bailwick of any of our
 // Authority domains.
 func (t *request) setAuthority() {
-	t.auth = t.authorities.findInBailiwick(t.qName)
+	t.auth = t.authorities.findInDomain(t.qName)
 }
