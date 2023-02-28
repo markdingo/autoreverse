@@ -60,7 +60,7 @@ test tests:
 	go test ./...
 	go vet ./...
 
-version.go: generate_version.sh ChangeLog.md Makefile
+version.go: generate_version.sh ChangeLog.md Makefile go.mod
 	sh generate_version.sh ChangeLog.md >$@
 
 USAGE.md: $(ARCMD) usage.go generate_usage.sh Makefile
