@@ -30,8 +30,6 @@ help:
 	@echo "	   'windows/amd64' - Windows 64bit on Intel/AMD"
 	@echo "	   'windows/386' - Windows 32bit"
 	@echo
-	@echo "	 Cross-platform Windows targets: 'windowsamd64' and 'windows386'"
-	@echo
 
 .PHONY: vet
 vet:
