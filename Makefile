@@ -36,7 +36,7 @@ help:
 .PHONY: vet
 vet:
 	go vet ./...
-	mandoc -Tlint autoreverse.8; exit 0
+	mandoc -Tlint $(MANSRC); exit 0
 
 .PHONY: clean
 clean:
