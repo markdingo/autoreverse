@@ -4,8 +4,8 @@ go 1.20
 
 require (
 	github.com/dchest/siphash v1.2.3
-	github.com/markdingo/miekgrrl v0.0.0-20230214054502-ba66a1cf61d1
-	github.com/markdingo/rrl v0.0.0-20230214060506-d69cfe9ef4d5
+	github.com/markdingo/miekgrrl v1.0.0
+	github.com/markdingo/rrl v1.0.0
 	github.com/miekg/dns v1.1.50
 	github.com/spf13/pflag v1.0.6-0.20210604193023-d5e0c0615ace
 )
