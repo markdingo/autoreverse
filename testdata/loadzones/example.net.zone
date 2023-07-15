@@ -1,5 +1,5 @@
 $ORIGIN example.net.
-@	IN SOA internal.example.net. hostmaster.example.net. 1636863624 3 3 1209600 480
+@	IN SOA internal.example.net. hostmaster.example.net. 1689400750 3 3 1209600 480
 	IN NS  ns1
 
 pluton	IN	A	192.0.2.123
@@ -10,7 +10,7 @@ images	IN	A	192.0.2.124
 	IN	AAAA	2001:db8::125
 
 frodo	IN MX 10 palace ;; ignored
-	
+
 google 	IN CNAME	dns.google. ;; Thanks Mr Google - hope u don't mind
 	   			    ;; Should return two A RRs and two AAAA RRs
 ;;

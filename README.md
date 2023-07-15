@@ -15,7 +15,7 @@ accessible servers with static network configurations.
 global DNS but it also supports [rfc1918](https://datatracker.ietf.org/doc/html/rfc1918)
 and [rfc4193](https://datatracker.ietf.org/doc/html/rfc4193) addresses - otherwise known
 as private addresses or User Local Addresses in `ipv6` parlance.
-     
+
 On start-up, `autoreverse` extracts forward and reverse delegation details from the DNS to
 synthesize its own "Zones of Authority". This approach to gleaning information from the
 DNS represents an over-arching philosophy of `autoreverse` in that it never requires

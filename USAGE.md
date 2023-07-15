@@ -71,30 +71,30 @@ OPTIONS
       --PTR-deduce stringArray      Load zone from URL and convert address records into PTRs
       --TTL duration                TTL for synthetic responses (>= 1s) (default 1h0m0s)
       --chroot string               Reduce privileges with chroot() after --listen.
-                                    
+
       --forward string              Forward zone to discover and serve. Delegation must be present
                                     in the parent name servers. Cannot be used when --local-forward
                                     is set.
-                                    
+
       --group string                Reduce privileges with setgid() after --listen.
   -h, --help                        Print command-line usage
       --listen stringArray          Address to listen on for DNS queries - accepts 'host:port',
                                     ':port', ':service', v4address:port or [v6address]:port syntax.
                                     The default is ':domain'.
-                                    
+
       --local-forward string        Local Forward zone to serve. No discovery is attempted and
                                     the SOA is mostly empty. Cannot be used when --forward is set.
-                                    
+
       --local-reverse stringArray   CIDR of local reverse zone to serve. Intended for rfc1918 and
                                     rfc4193 addresses (otherwise known as private addresses or
                                     ULAs).
-                                    
+
                                     The CIDR represents a zone which is not expected to be visible
                                     in the public DNS and is only visible locally where local
                                     resolvers are configured to direct reverse queries to
                                     autoreverse. How this is achieved varies greatly. See your
                                     resolver documentation for details.
-                                    
+
       --log-debug                   Log debug events to Stdout - this implies --log-minor
       --log-major                   Log major events to Stdout (default true)
       --log-minor                   Log minor events to Stdout - this implies --log-major
@@ -102,14 +102,14 @@ OPTIONS
                                     SIGUSR2. (default true)
       --manpage                     Print complete mandoc - pipe into 'mandoc -a' to produce a
                                     formatted manual page.
-                                    
+
       --max-answers int             Maximum PTRs to add to response - this helps limit response
                                     sizes after max UDP size is taken into account. (default 5)
       --passthru string             DNS server to pass thru queries which are not in-domain.
       --report duration             Interval between statistics reports (>= 1s) (default 1h0m0s)
       --reverse stringArray         CIDR of reverse zone to discover and serve. Delegation must be
                                     present in the parent name servers.
-                                    
+
       --rrl-dryrun                  Invoke RRL analysis but ignore recommended action
       --rrl-errors-psec string      The number of Error responses allowed per second (excluding
                                     NXDomain). An allowance of 0 disables Error rate limiting
