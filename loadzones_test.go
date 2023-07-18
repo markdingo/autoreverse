@@ -137,10 +137,10 @@ func TestLoadFromFile(t *testing.T) {
 
 		// Check side-effects
 		if pz.dtm.IsZero() {
-			t.Error("loadZoneFromFile did not return a DTM", pz.dtm)
+			t.Error("loadZoneFromFile did not return a DTM", tc.zone, pz.dtm)
 		}
 		if pz.soa.Serial != 1636863624 {
-			t.Error("Incorrect serial", pz.soa.Serial)
+			t.Error("Incorrect serial", tc.zone, pz.soa.Serial)
 		}
 	}
 }
