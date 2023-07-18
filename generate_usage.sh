@@ -12,7 +12,7 @@ not reflect the most recent changes to @master.
 ```
 EOF
 
-cat
+sed -e 's/[[:space:]]*$//'
 
 cat <<'EOF'
 ```
