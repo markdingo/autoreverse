@@ -53,7 +53,7 @@ install: $(ARCMD)
 
 .PHONY: fmt
 fmt:
-	find . -name '*.go' -type f -print | xargs gofmt -s -w
+	gofmt -s -w .
 
 .PHONY: test tests
 test tests:
