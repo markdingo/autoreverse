@@ -11,15 +11,15 @@
 .Fl -forward Ar zone-name | Fl -local-forward Ar zone-name
 .Vt
 .Fl -reverse Ar CIDR Ns
-\[u2026]
+.Ar ...
 |
 .Fl -local-reverse Ar CIDR Ns
-\[u2026]
+.Ar ...
 .Vt
 .Op Fl -listen Ar listen-address Ns
-\[u2026]
+.Ar ...
 .Op Fl -PTR-deduce Ar URL Ns
-\[u2026]
+.Ar ...
 .Op Fl -passthru Ar auth-server
 .Vt
 .Op Fl -synthesize Ns = Ns Ar true
@@ -50,9 +50,9 @@
 .Op Fl -rrl-requests-psec Ar allowance
 .Op Fl -rrl-responses-psec Ar allowance
 .Pp
-The
-.Ql \[u2026]
-symbol indicates options which can be specified multiple times.
+Ellipses
+.Sq ( ... )
+indicate options which can be repeated.
 .Sh DESCRIPTION
 .Nm
 is a specialized authoritative DNS server whose goal is to make it as easy as
