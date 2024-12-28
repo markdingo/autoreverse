@@ -74,8 +74,8 @@ func (t *request) genOpt() *dns.OPT {
 // findCookies searches the OPT RR for rfc7873 cookies. It sets all the cookie-related
 // variables in the request.
 //
-// Regardless of the validity of the cookie data, whatever cookie material is set in the
-// request as it may be of use for logging or debug purposes.
+// Regardless of the validity of the cookie data, whatever cookie material is found, is
+// set in the request as it may be of use for logging or debug purposes.
 func (t *request) findCookies() {
 	if t.opt == nil {
 		return
