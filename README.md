@@ -42,7 +42,7 @@ capabilities within that scope. Specifically it:
 
 1. Synthesizes PTR responses in the reverse zone
 1. Synthesizes matching/correlated A/AAAA responses in the forward zone
-1. Requires minimal configuration and zero-maintenance by deducing zone configuration with DNS Probing
+1. Auto-configures by deducing zone configuration with DNS Probing
 2. Can load forward zones and derive corresponding PTR values from A, AAAA and CNAME RRs to intermingle with synthetic responses
 4. Responds to zone specific queries such as NS, SOA and ANY
 5. Is written in [go](https://golang.org) with resource efficiency in mind
@@ -67,7 +67,7 @@ all, you might be a sysadmin who wants all reverse queries directed to a zero-ma
 system, in which case `autoreverse` can probably take care of that for you.
 
 
-### What is meant by "minimal configuration"?
+### What is meant by "auto-configures"?
 
 `autoreverse` avoids redundant configuration and attempts to deduce just about everything
 possible that's already present in the DNS. That means `autoreverse` can start up and

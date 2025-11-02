@@ -264,7 +264,7 @@ present in the parent name servers.
 // sure that's a good idea, but we'll live with it for now.
 //
 // In essence, the rrl package does all the conversion to ints and floats then returns
-// errors as necessary so at this level all values are accepted a strings without any
+// errors as necessary so at this level all values are accepted as strings without any
 // validation.
 //
 // Since the rrl config starts life as a no-op config, at least one of the *psec values

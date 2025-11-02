@@ -574,7 +574,7 @@ func (t *server) serveReverse(wtr dns.ResponseWriter, req *request) serveResult 
 	return serveDone
 }
 
-// writeMsg finalized the output message with all of the common processing, checks with
+// writeMsg finalizes the output message with all of the common processing, checks with
 // RRL to see if the response is rate-limited and then potentially calls the response
 // writer to send the message. Any error is recorded in req.logError
 func (t *server) writeMsg(wtr dns.ResponseWriter, req *request) {
